@@ -1,0 +1,92 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "lockedRate", "lockExpirationDate"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "quoteId": { "bsonType": "string" },
+      "lockDate": { "bsonType": "date" },
+      "lockExpirationDate": { "bsonType": "date" },
+      "lockPeriodDays": {
+        "bsonType": "int",
+        "enum": [15, 30, 45, 60, 90]
+      },
+      "lockedRate": { "bsonType": "double" },
+      "lockedPrice": { "bsonType": "double" },
+      "lockedPoints": { "bsonType": "double" },
+      "productId": { "bsonType": "string" },
+      "productType": { "bsonType": "string" },
+      "loanAmount": { "bsonType": "decimal" },
+      "status": {
+        "bsonType": "string",
+        "enum": ["PENDING_CONFIRMATION", "ACTIVE", "EXTENDED", "RENEGOTIATED", "EXPIRED", "CANCELLED", "FUNDED"]
+      },
+      "extensions": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "extensionDate": { "bsonType": "date" },
+            "previousExpiration": { "bsonType": "date" },
+            "newExpiration": { "bsonType": "date" },
+            "extensionDays": { "bsonType": "int" },
+            "extensionFee": { "bsonType": "decimal" },
+            "extensionReason": { "bsonType": "string" },
+            "approvedBy": { "bsonType": "string" }
+          }
+        }
+      },
+      "extensionCount": { "bsonType": "int" },
+      "totalExtensionFees": { "bsonType": "decimal" },
+      "renegotiation": {
+        "bsonType": "object",
+        "properties": {
+          "renegotiatedDate": { "bsonType": "date" },
+          "previousRate": { "bsonType": "double" },
+          "newRate": { "bsonType": "double" },
+          "reason": { "bsonType": "string" },
+          "approvedBy": { "bsonType": "string" }
+        }
+      },
+      "confirmation": {
+        "bsonType": "object",
+        "properties": {
+          "confirmed": { "bsonType": "bool" },
+          "confirmedDate": { "bsonType": "date" },
+          "confirmedBy": { "bsonType": "string" },
+          "confirmationNumber": { "bsonType": "string" }
+        }
+      },
+      "cancellation": {
+        "bsonType": "object",
+        "properties": {
+          "cancelledDate": { "bsonType": "date" },
+          "cancelledBy": { "bsonType": "string" },
+          "cancelReason": { "bsonType": "string" }
+        }
+      },
+      "lockedBy": { "bsonType": "string" },
+      "notes": { "bsonType": "string" },
+      "history": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "action": {
+              "bsonType": "string",
+              "enum": ["CREATED", "CONFIRMED", "EXTENDED", "RENEGOTIATED", "CANCELLED", "EXPIRED", "FUNDED"]
+            },
+            "actionDate": { "bsonType": "date" },
+            "actionBy": { "bsonType": "string" },
+            "previousValue": { "bsonType": "string" },
+            "newValue": { "bsonType": "string" },
+            "notes": { "bsonType": "string" }
+          }
+        }
+      },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.lendwise</groupId>
+        <artifactId>lendwise-orchestration</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>osb-services</artifactId>
+    <packaging>jar</packaging>
+
+    <name>LendWise OSB Services</name>
+    <description>Oracle Service Bus (OSB 12c) Proxy Services, Pipelines, and Business Services</description>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>.</directory>
+                <includes>
+                    <include>**/*.proxy</include>
+                    <include>**/*.pipeline</include>
+                    <include>**/*.bsp</include>
+                    <include>**/*.wsdl</include>
+                    <include>**/*.xsd</include>
+                    <include>**/*.xq</include>
+                </includes>
+                <excludes>
+                    <exclude>target/**</exclude>
+                    <exclude>pom.xml</exclude>
+                </excludes>
+            </resource>
+        </resources>
+    </build>
+</project>

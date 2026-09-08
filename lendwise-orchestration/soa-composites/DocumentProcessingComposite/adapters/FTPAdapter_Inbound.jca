@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="FTPAdapterInbound"
+                adapter="ftp"
+                wsdlLocation="FTPAdapter_Inbound.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- FTP Adapter - Inbound Configuration                                -->
+    <!-- Receives documents from external sources via FTP                   -->
+    <!-- Used for third-party document delivery (title companies, etc.)     -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/Ftp/FtpAdapter"
+                        UIConnectionName="FtpAdapter"
+                        adapterRef=""/>
+
+    <endpoint-activation portType="Get_ptt" operation="Get">
+        <activation-spec className="oracle.tip.adapter.ftp.inbound.FTPActivationSpec">
+            <!-- Remote FTP directory to poll -->
+            <property name="PhysicalDirectory" value="/external/uploads"/>
+
+            <!-- Logical directory name -->
+            <property name="LogicalDirectory" value="ftp-incoming"/>
+
+            <!-- File patterns to include -->
+            <property name="IncludeFiles" value=".*\.(pdf|PDF|xml|XML|zip|ZIP)"/>
+
+            <!-- Exclude patterns -->
+            <property name="ExcludeFiles" value=".*\.tmp"/>
+
+            <!-- Polling frequency in seconds -->
+            <property name="PollingFrequency" value="60"/>
+
+            <!-- Minimum file age before processing -->
+            <property name="MinimumAge" value="10"/>
+
+            <!-- Delete file from FTP after download -->
+            <property name="DeleteFile" value="true"/>
+
+            <!-- Archive directory on FTP server (before delete) -->
+            <property name="PhysicalArchiveDirectory" value="/external/archive"/>
+
+            <!-- Use passive FTP mode -->
+            <property name="UsePassive" value="true"/>
+
+            <!-- Binary transfer mode -->
+            <property name="FileType" value="binary"/>
+
+            <!-- Nested directory structure -->
+            <property name="NestedRecursive" value="false"/>
+
+            <!-- Thread count -->
+            <property name="ThreadCount" value="1"/>
+
+            <!-- Max files per poll -->
+            <property name="MaxRaiseSize" value="5"/>
+
+            <!-- Connection retry count -->
+            <property name="RetryCount" value="3"/>
+
+            <!-- Retry interval in seconds -->
+            <property name="RetryInterval" value="30"/>
+        </activation-spec>
+    </endpoint-activation>
+
+</adapter-config>

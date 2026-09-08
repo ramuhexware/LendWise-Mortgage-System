@@ -1,0 +1,143 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "decisionType", "decisionResult"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "borrowerId": { "bsonType": "string" },
+      "decisionType": {
+        "bsonType": "string",
+        "enum": ["AUS_INITIAL", "AUS_RESUBMIT", "MANUAL_INITIAL", "MANUAL_OVERRIDE", "APPEAL"]
+      },
+      "decisionEngine": {
+        "bsonType": "string",
+        "enum": ["DU", "LP", "INTERNAL", "MANUAL"]
+      },
+      "decisionResult": {
+        "bsonType": "string",
+        "enum": ["APPROVE", "APPROVE_ELIGIBLE", "REFER", "REFER_CAUTION", "CAUTION", "DECLINE", "INELIGIBLE", "UNABLE_TO_DETERMINE"]
+      },
+      "decisionDate": { "bsonType": "date" },
+      "underwriterId": { "bsonType": "string" },
+      "underwriterName": { "bsonType": "string" },
+      "riskAssessment": {
+        "bsonType": "object",
+        "properties": {
+          "riskScore": { "bsonType": "double", "minimum": 0, "maximum": 100 },
+          "riskGrade": {
+            "bsonType": "string",
+            "enum": ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"]
+          },
+          "riskFactors": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "factor": { "bsonType": "string" },
+                "impact": {
+                  "bsonType": "string",
+                  "enum": ["POSITIVE", "NEGATIVE", "NEUTRAL"]
+                },
+                "weight": { "bsonType": "double" },
+                "description": { "bsonType": "string" }
+              }
+            }
+          }
+        }
+      },
+      "ratiosAtDecision": {
+        "bsonType": "object",
+        "properties": {
+          "dti": { "bsonType": "double" },
+          "frontEndDti": { "bsonType": "double" },
+          "backEndDti": { "bsonType": "double" },
+          "ltv": { "bsonType": "double" },
+          "cltv": { "bsonType": "double" },
+          "piti": { "bsonType": "double" }
+        }
+      },
+      "creditAtDecision": {
+        "bsonType": "object",
+        "properties": {
+          "ficoScore": { "bsonType": "int" },
+          "representativeBureau": { "bsonType": "string" },
+          "revolvingUtilization": { "bsonType": "double" },
+          "derogatoryMarks": { "bsonType": "int" }
+        }
+      },
+      "ausResponse": {
+        "bsonType": "object",
+        "properties": {
+          "keyNumber": { "bsonType": "string" },
+          "casefileId": { "bsonType": "string" },
+          "recommendation": { "bsonType": "string" },
+          "findings": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "findingId": { "bsonType": "string" },
+                "category": { "bsonType": "string" },
+                "message": { "bsonType": "string" }
+              }
+            }
+          },
+          "rawResponse": { "bsonType": "string" }
+        }
+      },
+      "conditions": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "required": ["conditionType", "conditionCode", "description"],
+          "properties": {
+            "conditionId": { "bsonType": "string" },
+            "conditionType": {
+              "bsonType": "string",
+              "enum": ["PTD", "PTF"]
+            },
+            "conditionCode": { "bsonType": "string" },
+            "category": {
+              "bsonType": "string",
+              "enum": ["CREDIT", "INCOME", "ASSET", "PROPERTY", "LEGAL", "OTHER"]
+            },
+            "description": { "bsonType": "string" },
+            "priority": {
+              "bsonType": "string",
+              "enum": ["CRITICAL", "HIGH", "NORMAL", "LOW"]
+            },
+            "status": {
+              "bsonType": "string",
+              "enum": ["OPEN", "SUBMITTED", "UNDER_REVIEW", "CLEARED", "WAIVED"]
+            },
+            "dueDate": { "bsonType": "date" },
+            "assignedTo": { "bsonType": "string" },
+            "documentId": { "bsonType": "string" },
+            "clearedDate": { "bsonType": "date" },
+            "clearedBy": { "bsonType": "string" },
+            "waivedDate": { "bsonType": "date" },
+            "waivedBy": { "bsonType": "string" },
+            "waiverReason": { "bsonType": "string" },
+            "notes": { "bsonType": "string" }
+          }
+        }
+      },
+      "notes": { "bsonType": "string" },
+      "statusHistory": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "status": { "bsonType": "string" },
+            "timestamp": { "bsonType": "date" },
+            "changedBy": { "bsonType": "string" },
+            "reason": { "bsonType": "string" }
+          }
+        }
+      },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

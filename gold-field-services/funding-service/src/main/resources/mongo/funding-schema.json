@@ -1,0 +1,104 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "cdId", "status"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "cdId": { "bsonType": "string" },
+      "status": {
+        "bsonType": "string",
+        "enum": ["PENDING_REVIEW", "CONDITIONS_PENDING", "APPROVED", "WIRE_PENDING", "WIRE_SENT", "FUNDED", "SUSPENDED", "CANCELLED"]
+      },
+      "fundingDate": { "bsonType": "date" },
+      "wireDetails": {
+        "bsonType": "object",
+        "properties": {
+          "wireAmount": { "bsonType": "decimal" },
+          "wireReference": { "bsonType": "string" },
+          "wireDate": { "bsonType": "date" },
+          "wireConfirmed": { "bsonType": "bool" },
+          "wireConfirmedDate": { "bsonType": "date" },
+          "wireConfirmedBy": { "bsonType": "string" },
+          "recipientBank": { "bsonType": "string" },
+          "recipientAccount": { "bsonType": "string" },
+          "recipientRouting": { "bsonType": "string" }
+        }
+      },
+      "recordingDetails": {
+        "bsonType": "object",
+        "properties": {
+          "recordingDate": { "bsonType": "date" },
+          "recordingNumber": { "bsonType": "string" },
+          "recordingCounty": { "bsonType": "string" },
+          "recordingState": { "bsonType": "string" }
+        }
+      },
+      "conditions": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "conditionId": { "bsonType": "string" },
+            "conditionType": {
+              "bsonType": "string",
+              "enum": ["TITLE_CLEAR", "INSURANCE_BOUND", "DOCS_COMPLETE", "WIRE_VERIFIED", "FINAL_AUDIT"]
+            },
+            "description": { "bsonType": "string" },
+            "status": {
+              "bsonType": "string",
+              "enum": ["PENDING", "CLEARED", "WAIVED"]
+            },
+            "clearedDate": { "bsonType": "date" },
+            "clearedBy": { "bsonType": "string" },
+            "notes": { "bsonType": "string" }
+          }
+        }
+      },
+      "finalAudit": {
+        "bsonType": "object",
+        "properties": {
+          "auditStatus": {
+            "bsonType": "string",
+            "enum": ["PENDING", "PASS", "FAIL", "SUSPENDED"]
+          },
+          "auditDate": { "bsonType": "date" },
+          "auditedBy": { "bsonType": "string" },
+          "findings": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "findingType": { "bsonType": "string" },
+                "severity": { "bsonType": "string" },
+                "description": { "bsonType": "string" },
+                "resolution": { "bsonType": "string" }
+              }
+            }
+          }
+        }
+      },
+      "disbursements": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "recipient": { "bsonType": "string" },
+            "recipientType": {
+              "bsonType": "string",
+              "enum": ["TITLE_COMPANY", "SELLER", "PAYOFF", "ESCROW", "OTHER"]
+            },
+            "amount": { "bsonType": "decimal" },
+            "wireReference": { "bsonType": "string" },
+            "disbursedDate": { "bsonType": "date" }
+          }
+        }
+      },
+      "notes": { "bsonType": "string" },
+      "suspendedReason": { "bsonType": "string" },
+      "cancelledReason": { "bsonType": "string" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

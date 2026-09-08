@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/transform/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router>
+        <con:pipeline type="error" name="OSBDefaultErrorHandler">
+            <con:stage name="LogAndTransformError">
+                <con:context/>
+                <con:actions>
+                    <con1:assign varName="faultDetails">
+                        <con2:id>id_fault_handler_01</con2:id>
+                        <con1:expr>
+                            <con2:xqueryText>
+                                <osbFault xmlns="http://lendwise.com/osb/common/fault">
+                                    <errorCode>{$fault/ctx:errorCode/text()}</errorCode>
+                                    <errorReason>{$fault/ctx:reason/text()}</errorReason>
+                                    <errorMessage>{if (exists($fault/ctx:details)) then $fault/ctx:details/text() else "Internal OSB Processing Error"}</errorMessage>
+                                    <serviceName>{$inbound/ctx:service/ctx:name/text()}</serviceName>
+                                    <timestamp>{fn:current-dateTime()}</timestamp>
+                                </osbFault>
+                            </con2:xqueryText>
+                        </con1:expr>
+                    </con1:assign>
+                    <con1:replace varName="body" contents-only="true">
+                        <con2:id>id_fault_handler_02</con2:id>
+                        <con1:location>
+                            <con2:xpathText>.</con2:xpathText>
+                        </con1:location>
+                        <con1:expr>
+                            <con2:xqueryText>$faultDetails</con2:xqueryText>
+                        </con1:expr>
+                    </con1:replace>
+                    <con2:reply isError="true">
+                        <con2:id>id_fault_handler_03</con2:id>
+                    </con2:reply>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="MainFaultPipeline">
+                <con:request>MainFaultPipeline_request</con:request>
+                <con:response>MainFaultPipeline_response</con:response>
+            </con:pipeline-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

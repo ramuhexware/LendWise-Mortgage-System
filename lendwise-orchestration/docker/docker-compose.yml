@@ -1,0 +1,53 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Oracle Database 21c XE (Database for SOA Infra Schemas / RCU)
+  # ----------------------------------------------------------------------------
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: lendwise-oracle-db
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=welcome1
+      - APP_USER=lendwise
+      - APP_PASSWORD=welcome1
+    volumes:
+      - oracle_db_data:/opt/oracle/oradata
+    networks:
+      - soa-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Oracle WebLogic, OSB & SOA Suite 12c Server
+  # ----------------------------------------------------------------------------
+  soa-suite:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: lendwise/soasuite-osb:12.2.1.4
+    container_name: lendwise-soa-suite
+    ports:
+      - "7001:7001"  # WebLogic Admin Console & EM Console (http://localhost:7001/em)
+      - "8001:8001"  # SOA Managed Server (http://localhost:8001/soa-infra)
+      - "9001:9001"  # OSB Managed Server (http://localhost:9001/osb)
+    environment:
+      - DB_HOST=oracle-db
+      - DB_PORT=1521
+      - DB_SERVICE=XEPDB1
+      - ADMIN_USER=weblogic
+      - ADMIN_PASSWORD=welcome1
+    volumes:
+      - ../soa-composites:/u01/oracle/deploy/soa-composites
+      - ../osb-services:/u01/oracle/deploy/osb-services
+    depends_on:
+      - oracle-db
+    networks:
+      - soa-network
+    restart: unless-stopped
+
+networks:
+  soa-network:
+    driver: bridge
+
+volumes:
+  oracle_db_data:

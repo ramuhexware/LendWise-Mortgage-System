@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://lendwise.com/soa/document/types"
+            xmlns:tns="http://lendwise.com/soa/document/types"
+            elementFormDefault="qualified">
+
+    <!-- ================================================================== -->
+    <!-- Document Types                                                     -->
+    <!-- ================================================================== -->
+
+    <xsd:simpleType name="DocumentTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PAYSTUB"/>
+            <xsd:enumeration value="W2"/>
+            <xsd:enumeration value="TAX_1040"/>
+            <xsd:enumeration value="BANK_STATEMENT"/>
+            <xsd:enumeration value="RETIREMENT_STATEMENT"/>
+            <xsd:enumeration value="DRIVERS_LICENSE"/>
+            <xsd:enumeration value="PASSPORT"/>
+            <xsd:enumeration value="SSN_CARD"/>
+            <xsd:enumeration value="PURCHASE_CONTRACT"/>
+            <xsd:enumeration value="APPRAISAL"/>
+            <xsd:enumeration value="TITLE_REPORT"/>
+            <xsd:enumeration value="INSURANCE_BINDER"/>
+            <xsd:enumeration value="VOE"/>
+            <xsd:enumeration value="VOD"/>
+            <xsd:enumeration value="OTHER"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="DocumentCategoryEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="INCOME"/>
+            <xsd:enumeration value="ASSET"/>
+            <xsd:enumeration value="IDENTITY"/>
+            <xsd:enumeration value="PROPERTY"/>
+            <xsd:enumeration value="OTHER"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="DocumentStatusEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="UPLOADED"/>
+            <xsd:enumeration value="PROCESSING"/>
+            <xsd:enumeration value="CLASSIFIED"/>
+            <xsd:enumeration value="OCR_COMPLETE"/>
+            <xsd:enumeration value="VERIFIED"/>
+            <xsd:enumeration value="REJECTED"/>
+            <xsd:enumeration value="ARCHIVED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Document Request/Response Types                                    -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="DocumentRequestType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="borrowerId" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="documentType" type="tns:DocumentTypeEnum"/>
+            <xsd:element name="fileName" type="xsd:string"/>
+            <xsd:element name="filePath" type="xsd:string"/>
+            <xsd:element name="fileContent" type="xsd:base64Binary" minOccurs="0"/>
+            <xsd:element name="mimeType" type="xsd:string"/>
+            <xsd:element name="uploadSource" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="DocumentResultType">
+        <xsd:sequence>
+            <xsd:element name="documentId" type="xsd:string"/>
+            <xsd:element name="status" type="tns:DocumentStatusEnum"/>
+            <xsd:element name="classifiedType" type="tns:DocumentTypeEnum"/>
+            <xsd:element name="confidence" type="xsd:decimal"/>
+            <xsd:element name="ocrData" type="tns:OCROutputType" minOccurs="0"/>
+            <xsd:element name="validationResult" type="tns:ValidationResultType" minOccurs="0"/>
+            <xsd:element name="processedAt" type="xsd:dateTime"/>
+            <xsd:element name="message" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- OCR Types                                                          -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="OCROutputType">
+        <xsd:sequence>
+            <xsd:element name="extractedText" type="xsd:string"/>
+            <xsd:element name="confidence" type="xsd:decimal"/>
+            <xsd:element name="processingTimeMs" type="xsd:long" minOccurs="0"/>
+            <xsd:element name="ocrEngine" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="fields" type="tns:ExtractedFieldsType" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ExtractedFieldsType">
+        <xsd:sequence>
+            <!-- Common fields -->
+            <xsd:element name="documentDate" type="xsd:date" minOccurs="0"/>
+
+            <!-- Paystub fields -->
+            <xsd:element name="employerName" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="employeeName" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="grossPay" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="netPay" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="payDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="payPeriodStart" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="payPeriodEnd" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="ytdGross" type="xsd:decimal" minOccurs="0"/>
+
+            <!-- W2 fields -->
+            <xsd:element name="taxYear" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="wages" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="federalWithholding" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="employerEIN" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="employeeSSN" type="xsd:string" minOccurs="0"/>
+
+            <!-- Bank Statement fields -->
+            <xsd:element name="bankName" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="accountNumber" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="accountType" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="beginningBalance" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="endingBalance" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="totalDeposits" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="totalWithdrawals" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Classification Types                                               -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ClassificationResultType">
+        <xsd:sequence>
+            <xsd:element name="classifiedType" type="tns:DocumentTypeEnum"/>
+            <xsd:element name="confidence" type="xsd:decimal"/>
+            <xsd:element name="method" type="xsd:string"/>
+            <xsd:element name="alternativeTypes" type="tns:AlternativeTypeListType" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="AlternativeTypeListType">
+        <xsd:sequence>
+            <xsd:element name="alternative" maxOccurs="unbounded">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="type" type="tns:DocumentTypeEnum"/>
+                        <xsd:element name="confidence" type="xsd:decimal"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Validation Types                                                   -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ValidationResultType">
+        <xsd:sequence>
+            <xsd:element name="isValid" type="xsd:boolean"/>
+            <xsd:element name="validatedAt" type="xsd:dateTime"/>
+            <xsd:element name="issues" type="tns:ValidationIssueListType" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ValidationIssueListType">
+        <xsd:sequence>
+            <xsd:element name="issue" type="tns:ValidationIssueType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ValidationIssueType">
+        <xsd:sequence>
+            <xsd:element name="issueType" type="xsd:string"/>
+            <xsd:element name="severity" type="xsd:string"/>
+            <xsd:element name="message" type="xsd:string"/>
+            <xsd:element name="field" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Document Checklist Types                                           -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="DocumentChecklistType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="items" type="tns:ChecklistItemListType"/>
+            <xsd:element name="completionPercent" type="xsd:decimal"/>
+            <xsd:element name="lastUpdated" type="xsd:dateTime"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ChecklistItemListType">
+        <xsd:sequence>
+            <xsd:element name="item" type="tns:ChecklistItemType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ChecklistItemType">
+        <xsd:sequence>
+            <xsd:element name="documentType" type="tns:DocumentTypeEnum"/>
+            <xsd:element name="required" type="xsd:boolean"/>
+            <xsd:element name="status" type="xsd:string"/>
+            <xsd:element name="documentId" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="receivedDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="notes" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

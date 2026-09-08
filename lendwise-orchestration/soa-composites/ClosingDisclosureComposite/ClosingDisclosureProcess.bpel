@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="ClosingDisclosureProcess"
+         targetNamespace="http://lendwise.com/soa/closing/bpel"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:bpws="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:tns="http://lendwise.com/soa/closing/bpel"
+         xmlns:closing="http://lendwise.com/soa/closing"
+         xmlns:types="http://lendwise.com/soa/closing/types"
+         xmlns:db="http://lendwise.com/soa/adapter/db"
+         xmlns:jms="http://lendwise.com/soa/adapter/jms"
+         xmlns:esign="http://lendwise.com/soa/esign"
+         xmlns:title="http://lendwise.com/soa/title">
+
+    <!-- ================================================================== -->
+    <!-- Partner Links                                                      -->
+    <!-- ================================================================== -->
+
+    <partnerLinks>
+        <partnerLink name="ClosingDisclosureClient"
+                     partnerLinkType="closing:ClosingDisclosurePLT"
+                     myRole="ClosingDisclosureProvider"/>
+
+        <partnerLink name="CDRequestQueueListener"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     myRole="JMSConsumer"/>
+
+        <partnerLink name="ClosingDB"
+                     partnerLinkType="db:ClosingDBPLT"
+                     partnerRole="DatabaseProvider"/>
+
+        <partnerLink name="NotificationQueue"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     partnerRole="JMSProducer"/>
+
+        <partnerLink name="ESignService"
+                     partnerLinkType="esign:ESignPLT"
+                     partnerRole="ESignProvider"/>
+
+        <partnerLink name="TitleService"
+                     partnerLinkType="title:TitlePLT"
+                     partnerRole="TitleProvider"/>
+
+        <partnerLink name="PassthroughClosingService"
+                     partnerLinkType="closing:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+    </partnerLinks>
+
+    <!-- ================================================================== -->
+    <!-- Variables                                                          -->
+    <!-- ================================================================== -->
+
+    <variables>
+        <variable name="inputVariable" messageType="closing:ClosingDisclosureRequest"/>
+        <variable name="outputVariable" messageType="closing:ClosingDisclosureResponse"/>
+        <variable name="cdId" type="xsd:string"/>
+        <variable name="cdDocument" type="xsd:base64Binary"/>
+        <variable name="titleRequest" messageType="title:TitleRequest"/>
+        <variable name="titleResponse" messageType="title:TitleResponse"/>
+        <variable name="esignRequest" messageType="esign:ESignRequest"/>
+        <variable name="esignResponse" messageType="esign:ESignResponse"/>
+        <variable name="notificationMessage" messageType="jms:NotificationMessage"/>
+        <variable name="dbInsertRequest" messageType="db:ClosingDisclosureCollection"/>
+        <variable name="cashToClose" type="xsd:decimal"/>
+        <variable name="earliestClosingDate" type="xsd:date"/>
+    </variables>
+
+    <!-- ================================================================== -->
+    <!-- Main Sequence                                                      -->
+    <!-- ================================================================== -->
+
+    <sequence name="MainSequence">
+
+        <!-- Receive CD request -->
+        <receive name="ReceiveCDRequest"
+                 partnerLink="ClosingDisclosureClient"
+                 operation="generateClosingDisclosure"
+                 variable="inputVariable"
+                 createInstance="yes"/>
+
+        <!-- Generate CD ID -->
+        <assign name="GenerateCDId">
+            <copy>
+                <from>ora:generateGUID()</from>
+                <to variable="cdId"/>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Get Title/Settlement figures                                   -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareTitleRequest">
+            <copy>
+                <from>$inputVariable.cdRequest/types:loanId</from>
+                <to>$titleRequest.titleRequest/title:loanId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.cdRequest/types:propertyAddress</from>
+                <to>$titleRequest.titleRequest/title:propertyAddress</to>
+            </copy>
+        </assign>
+
+        <invoke name="GetTitleFigures"
+                partnerLink="TitleService"
+                operation="getSettlementFigures"
+                inputVariable="titleRequest"
+                outputVariable="titleResponse"/>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: Calculate Cash to Close                        -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="CalculateCashToClose" language="java">
+            <![CDATA[
+                // Get loan terms
+                double loanAmount = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "cdRequest", "/types:loanAmount"));
+                double purchasePrice = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "cdRequest", "/types:purchasePrice"));
+
+                // Get fees from title response
+                double titleFees = Double.parseDouble(
+                    (String)getVariableData("titleResponse", "titleResult", "/title:totalSettlementFees"));
+                double escrowDeposit = Double.parseDouble(
+                    (String)getVariableData("titleResponse", "titleResult", "/title:escrowDeposit"));
+
+                // Get credits
+                double sellerCredits = 0.0;
+                try {
+                    sellerCredits = Double.parseDouble(
+                        (String)getVariableData("inputVariable", "cdRequest", "/types:sellerCredits"));
+                } catch (Exception e) {}
+
+                double lenderCredits = 0.0;
+                try {
+                    lenderCredits = Double.parseDouble(
+                        (String)getVariableData("inputVariable", "cdRequest", "/types:lenderCredits"));
+                } catch (Exception e) {}
+
+                // Get prepaid items
+                double prepaidInterest = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "cdRequest", "/types:prepaidInterest"));
+                double prepaidInsurance = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "cdRequest", "/types:prepaidInsurance"));
+                double prepaidTaxes = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "cdRequest", "/types:prepaidTaxes"));
+
+                // Down payment
+                double downPayment = purchasePrice - loanAmount;
+
+                // Calculate cash to close
+                double totalClosingCosts = titleFees + escrowDeposit + prepaidInterest + prepaidInsurance + prepaidTaxes;
+                double totalCredits = sellerCredits + lenderCredits;
+                double cashToClose = downPayment + totalClosingCosts - totalCredits;
+
+                // Calculate earliest closing date (3 business days from CD delivery per TRID)
+                java.time.LocalDate today = java.time.LocalDate.now();
+                java.time.LocalDate earliestClosing = today.plusDays(3);
+
+                // Skip weekends
+                while (earliestClosing.getDayOfWeek() == java.time.DayOfWeek.SATURDAY ||
+                       earliestClosing.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+                    earliestClosing = earliestClosing.plusDays(1);
+                }
+
+                setVariableData("cashToClose", String.format("%.2f", cashToClose));
+                setVariableData("earliestClosingDate", earliestClosing.toString());
+
+                addAuditTrailEntry("Cash to Close calculated: $" + String.format("%.2f", cashToClose) +
+                    ", Down Payment: $" + String.format("%.2f", downPayment) +
+                    ", Total Costs: $" + String.format("%.2f", totalClosingCosts) +
+                    ", Credits: $" + String.format("%.2f", totalCredits) +
+                    ", Earliest Closing: " + earliestClosing.toString());
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- Persist CD to database                                         -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareDBInsert">
+            <copy>
+                <from variable="cdId"/>
+                <to>$dbInsertRequest.ClosingDisclosureCollection/db:ClosingDisclosure/db:cdId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.cdRequest/types:loanId</from>
+                <to>$dbInsertRequest.ClosingDisclosureCollection/db:ClosingDisclosure/db:loanId</to>
+            </copy>
+            <copy>
+                <from variable="cashToClose"/>
+                <to>$dbInsertRequest.ClosingDisclosureCollection/db:ClosingDisclosure/db:cashToClose</to>
+            </copy>
+            <copy>
+                <from variable="earliestClosingDate"/>
+                <to>$dbInsertRequest.ClosingDisclosureCollection/db:ClosingDisclosure/db:earliestClosingDate</to>
+            </copy>
+            <copy>
+                <from>'GENERATED'</from>
+                <to>$dbInsertRequest.ClosingDisclosureCollection/db:ClosingDisclosure/db:status</to>
+            </copy>
+        </assign>
+
+        <invoke name="PersistCD"
+                partnerLink="ClosingDB"
+                operation="insertClosingDisclosure"
+                inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- Send for eSignature                                            -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareESignRequest">
+            <copy>
+                <from variable="cdId"/>
+                <to>$esignRequest.esignRequest/esign:documentId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.cdRequest/types:borrowerEmail</from>
+                <to>$esignRequest.esignRequest/esign:signerEmail</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.cdRequest/types:borrowerName</from>
+                <to>$esignRequest.esignRequest/esign:signerName</to>
+            </copy>
+            <copy>
+                <from>'CLOSING_DISCLOSURE'</from>
+                <to>$esignRequest.esignRequest/esign:documentType</to>
+            </copy>
+        </assign>
+
+        <invoke name="SendForESign"
+                partnerLink="ESignService"
+                operation="createEnvelope"
+                inputVariable="esignRequest"
+                outputVariable="esignResponse"/>
+
+        <!-- ============================================================== -->
+        <!-- Send Notification via JMS                                      -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareNotification">
+            <copy>
+                <from>$inputVariable.cdRequest/types:loanId</from>
+                <to>$notificationMessage.notification/jms:loanId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.cdRequest/types:borrowerEmail</from>
+                <to>$notificationMessage.notification/jms:recipientEmail</to>
+            </copy>
+            <copy>
+                <from>'CLOSING_DISCLOSURE_READY'</from>
+                <to>$notificationMessage.notification/jms:notificationType</to>
+            </copy>
+            <copy>
+                <from>concat('Your Closing Disclosure is ready. Earliest closing date: ', string($earliestClosingDate))</from>
+                <to>$notificationMessage.notification/jms:message</to>
+            </copy>
+            <copy>
+                <from>$esignResponse.esignResult/esign:envelopeId</from>
+                <to>$notificationMessage.notification/jms:esignEnvelopeId</to>
+            </copy>
+        </assign>
+
+        <invoke name="SendNotification"
+                partnerLink="NotificationQueue"
+                operation="Produce"
+                inputVariable="notificationMessage"/>
+
+        <!-- Send to Gold Field via Pass-through -->
+        <invoke name="NotifyGoldField"
+                partnerLink="PassthroughClosingService"
+                operation="createClosingDisclosure"
+                inputVariable="inputVariable"/>
+
+        <!-- Prepare Response -->
+        <assign name="PrepareResponse">
+            <copy>
+                <from variable="cdId"/>
+                <to>$outputVariable.cdResult/types:cdId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.cdRequest/types:loanId</from>
+                <to>$outputVariable.cdResult/types:loanId</to>
+            </copy>
+            <copy>
+                <from>'GENERATED'</from>
+                <to>$outputVariable.cdResult/types:status</to>
+            </copy>
+            <copy>
+                <from variable="cashToClose"/>
+                <to>$outputVariable.cdResult/types:cashToClose</to>
+            </copy>
+            <copy>
+                <from variable="earliestClosingDate"/>
+                <to>$outputVariable.cdResult/types:earliestClosingDate</to>
+            </copy>
+            <copy>
+                <from>$esignResponse.esignResult/esign:envelopeId</from>
+                <to>$outputVariable.cdResult/types:esignEnvelopeId</to>
+            </copy>
+            <copy>
+                <from>$esignResponse.esignResult/esign:signingUrl</from>
+                <to>$outputVariable.cdResult/types:esignUrl</to>
+            </copy>
+        </assign>
+
+        <!-- Reply -->
+        <reply name="ReplyToClient"
+               partnerLink="ClosingDisclosureClient"
+               operation="generateClosingDisclosure"
+               variable="outputVariable"/>
+
+    </sequence>
+
+</process>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<composite name="ComplianceComposite"
+           revision="1.0"
+           label="TRID, QM/ATR Compliance Engine"
+           mode="active"
+           state="on"
+           xmlns="http://xmlns.oracle.com/sca/1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
+           xmlns:ui="http://xmlns.oracle.com/soa/designer/">
+
+    <!-- ================================================================== -->
+    <!-- Flow 4: Compliance                                                 -->
+    <!-- - TRID compliance (LE/CD timing, fee tolerances)                   -->
+    <!-- - QM/ATR rules (43% DTI cap, points & fees limits)                 -->
+    <!-- - RESPA/TILA validation                                            -->
+    <!-- - State-specific compliance rules                                  -->
+    <!-- ================================================================== -->
+
+    <!-- Import WSDLs -->
+    <import namespace="http://lendwise.com/soa/compliance"
+            location="ComplianceProcess.wsdl"
+            importType="wsdl"/>
+
+    <!-- ================================================================== -->
+    <!-- Exposed Services                                                   -->
+    <!-- ================================================================== -->
+
+    <service name="ComplianceService" ui:wsdlLocation="ComplianceProcess.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/compliance#wsdl.interface(CompliancePortType)"/>
+        <binding.ws port="http://lendwise.com/soa/compliance#wsdl.endpoint(ComplianceService/CompliancePort)"/>
+    </service>
+
+    <service name="ComplianceRESTService">
+        <interface.wsdl interface="http://lendwise.com/soa/compliance#wsdl.interface(CompliancePortType)"/>
+        <binding.rest location="/compliance/api"
+                      method="POST"
+                      contentType="application/json"/>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- BPEL Component                                                     -->
+    <!-- ================================================================== -->
+
+    <component name="ComplianceProcess" version="2.0">
+        <implementation.bpel src="ComplianceProcess.bpel"/>
+        <componentType>
+            <service name="ComplianceService">
+                <interface.wsdl interface="http://lendwise.com/soa/compliance#wsdl.interface(CompliancePortType)"/>
+            </service>
+
+            <reference name="ComplianceDB">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(ComplianceDB_ptt)"/>
+            </reference>
+            <reference name="PassthroughComplianceService">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+        </componentType>
+    </component>
+
+    <!-- ================================================================== -->
+    <!-- External References                                                -->
+    <!-- ================================================================== -->
+
+    <!-- Database Adapter - Compliance checks -->
+    <reference name="ComplianceDB" ui:wsdlLocation="adapters/ComplianceDB.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(ComplianceDB_ptt)"/>
+        <binding.jca config="adapters/ComplianceDB.jca"/>
+    </reference>
+
+    <!-- Pass-through to Gold Field compliance-service -->
+    <reference name="PassthroughComplianceService">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/compliance"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- ================================================================== -->
+    <!-- Wiring                                                             -->
+    <!-- ================================================================== -->
+
+    <wire>
+        <source.uri>ComplianceService</source.uri>
+        <target.uri>ComplianceProcess/ComplianceService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ComplianceRESTService</source.uri>
+        <target.uri>ComplianceProcess/ComplianceService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ComplianceProcess/ComplianceDB</source.uri>
+        <target.uri>ComplianceDB</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ComplianceProcess/PassthroughComplianceService</source.uri>
+        <target.uri>PassthroughComplianceService</target.uri>
+    </wire>
+
+</composite>

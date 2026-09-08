@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://lendwise.com/soa/closing/types"
+            xmlns:tns="http://lendwise.com/soa/closing/types"
+            elementFormDefault="qualified">
+
+    <!-- ================================================================== -->
+    <!-- Closing Disclosure Status Types                                    -->
+    <!-- ================================================================== -->
+
+    <xsd:simpleType name="CDStatusEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PENDING"/>
+            <xsd:enumeration value="GENERATED"/>
+            <xsd:enumeration value="DELIVERED"/>
+            <xsd:enumeration value="VIEWED"/>
+            <xsd:enumeration value="SIGNED"/>
+            <xsd:enumeration value="REVISED"/>
+            <xsd:enumeration value="SUPERSEDED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="FeeSectionEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="A_ORIGINATION"/>
+            <xsd:enumeration value="B_SERVICES_NO_SHOP"/>
+            <xsd:enumeration value="C_SERVICES_CAN_SHOP"/>
+            <xsd:enumeration value="D_TOTAL_LOAN_COSTS"/>
+            <xsd:enumeration value="E_TAXES_GOVT"/>
+            <xsd:enumeration value="F_PREPAIDS"/>
+            <xsd:enumeration value="G_ESCROW"/>
+            <xsd:enumeration value="H_OTHER"/>
+            <xsd:enumeration value="I_TOTAL_OTHER"/>
+            <xsd:enumeration value="J_TOTAL_COSTS"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Request/Response Types                                             -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ClosingDisclosureRequestType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="borrowerName" type="xsd:string"/>
+            <xsd:element name="borrowerEmail" type="xsd:string"/>
+            <xsd:element name="coBorrowerName" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="coBorrowerEmail" type="xsd:string" minOccurs="0"/>
+
+            <!-- Property -->
+            <xsd:element name="propertyAddress" type="xsd:string"/>
+            <xsd:element name="propertyCity" type="xsd:string"/>
+            <xsd:element name="propertyState" type="xsd:string"/>
+            <xsd:element name="propertyZip" type="xsd:string"/>
+
+            <!-- Loan Terms -->
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="purchasePrice" type="xsd:decimal"/>
+            <xsd:element name="interestRate" type="xsd:decimal"/>
+            <xsd:element name="loanTerm" type="xsd:int"/>
+            <xsd:element name="monthlyPayment" type="xsd:decimal"/>
+
+            <!-- Prepaid Items -->
+            <xsd:element name="prepaidInterest" type="xsd:decimal"/>
+            <xsd:element name="prepaidInsurance" type="xsd:decimal"/>
+            <xsd:element name="prepaidTaxes" type="xsd:decimal"/>
+
+            <!-- Credits -->
+            <xsd:element name="sellerCredits" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="lenderCredits" type="xsd:decimal" minOccurs="0"/>
+
+            <!-- Closing Date -->
+            <xsd:element name="scheduledClosingDate" type="xsd:date" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ClosingDisclosureResultType">
+        <xsd:sequence>
+            <xsd:element name="cdId" type="xsd:string"/>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="status" type="tns:CDStatusEnum"/>
+            <xsd:element name="version" type="xsd:int"/>
+            <xsd:element name="generatedAt" type="xsd:dateTime"/>
+            <xsd:element name="deliveredAt" type="xsd:dateTime" minOccurs="0"/>
+
+            <!-- Cash to Close Summary -->
+            <xsd:element name="cashToClose" type="xsd:decimal"/>
+            <xsd:element name="cashFromBorrower" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="cashToBorrower" type="xsd:decimal" minOccurs="0"/>
+
+            <!-- TRID Timing -->
+            <xsd:element name="earliestClosingDate" type="xsd:date"/>
+            <xsd:element name="waitingPeriodExpires" type="xsd:dateTime" minOccurs="0"/>
+
+            <!-- eSign Details -->
+            <xsd:element name="esignEnvelopeId" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="esignUrl" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="esignStatus" type="xsd:string" minOccurs="0"/>
+
+            <!-- Document -->
+            <xsd:element name="documentUrl" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Fee Types                                                          -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="CDFeeListType">
+        <xsd:sequence>
+            <xsd:element name="fee" type="tns:CDFeeType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="CDFeeType">
+        <xsd:sequence>
+            <xsd:element name="feeId" type="xsd:string"/>
+            <xsd:element name="section" type="tns:FeeSectionEnum"/>
+            <xsd:element name="lineNumber" type="xsd:string"/>
+            <xsd:element name="description" type="xsd:string"/>
+            <xsd:element name="borrowerPaid" type="xsd:decimal"/>
+            <xsd:element name="sellerPaid" type="xsd:decimal"/>
+            <xsd:element name="paidByOthers" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="paidOutsideClosing" type="xsd:boolean" minOccurs="0"/>
+            <xsd:element name="recipient" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Cash to Close Types                                                -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="CashToCloseType">
+        <xsd:sequence>
+            <xsd:element name="totalClosingCosts" type="xsd:decimal"/>
+            <xsd:element name="closingCostsPaidBeforeClosing" type="xsd:decimal"/>
+            <xsd:element name="closingCostsFinanced" type="xsd:decimal"/>
+            <xsd:element name="downPayment" type="xsd:decimal"/>
+            <xsd:element name="depositHeld" type="xsd:decimal"/>
+            <xsd:element name="fundsForBorrower" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="sellerCredits" type="xsd:decimal"/>
+            <xsd:element name="adjustments" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="cashToClose" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Loan Terms Summary                                                 -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="LoanTermsSummaryType">
+        <xsd:sequence>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="interestRate" type="xsd:decimal"/>
+            <xsd:element name="monthlyPrincipalInterest" type="xsd:decimal"/>
+            <xsd:element name="prepaymentPenalty" type="xsd:boolean"/>
+            <xsd:element name="balloonPayment" type="xsd:boolean"/>
+            <xsd:element name="canIncrease" type="xsd:boolean"/>
+            <xsd:element name="increaseDetails" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Projected Payments                                                 -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ProjectedPaymentsType">
+        <xsd:sequence>
+            <xsd:element name="period" type="tns:PaymentPeriodType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PaymentPeriodType">
+        <xsd:sequence>
+            <xsd:element name="years" type="xsd:string"/>
+            <xsd:element name="principalInterest" type="xsd:decimal"/>
+            <xsd:element name="mortgageInsurance" type="xsd:decimal"/>
+            <xsd:element name="estimatedEscrow" type="xsd:decimal"/>
+            <xsd:element name="totalMonthlyPayment" type="xsd:decimal"/>
+            <xsd:element name="estimatedTaxesInsuranceAssessments" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Comparisons (TRID Page 3)                                          -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="LECDComparisonType">
+        <xsd:sequence>
+            <xsd:element name="leTotal" type="xsd:decimal"/>
+            <xsd:element name="cdTotal" type="xsd:decimal"/>
+            <xsd:element name="difference" type="xsd:decimal"/>
+            <xsd:element name="toleranceCategory" type="xsd:string"/>
+            <xsd:element name="isWithinTolerance" type="xsd:boolean"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

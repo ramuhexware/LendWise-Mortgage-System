@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://lendwise.com/osb/common/fault"
+           xmlns:tns="http://lendwise.com/osb/common/fault"
+           elementFormDefault="qualified">
+
+    <xs:element name="OSBFault">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="errorCode" type="xs:string"/>
+                <xs:element name="errorReason" type="xs:string"/>
+                <xs:element name="errorMessage" type="xs:string"/>
+                <xs:element name="serviceName" type="xs:string"/>
+                <xs:element name="timestamp" type="xs:dateTime"/>
+                <xs:element name="transactionId" type="xs:string" minOccurs="0"/>
+                <xs:element name="details" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

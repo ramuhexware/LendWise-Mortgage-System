@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="ClosingDB"
+                adapter="db"
+                wsdlLocation="ClosingDB.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- Database Adapter - Closing Disclosure Documents                    -->
+    <!-- Provides operations for closing_disclosures, cd_fees tables        -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/DB/LendWiseDS"
+                        UIConnectionName="LendWiseDS"
+                        adapterRef=""/>
+
+    <!-- Insert Closing Disclosure -->
+    <endpoint-interaction portType="ClosingDB_ptt" operation="insertClosingDisclosure">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="ClosingDB.ClosingDisclosure"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="ClosingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Update Closing Disclosure Status -->
+    <endpoint-interaction portType="ClosingDB_ptt" operation="updateClosingDisclosure">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="ClosingDB.ClosingDisclosure"/>
+            <property name="DmlType" value="UPDATE"/>
+            <property name="MappingsMetaDataURL" value="ClosingDB-or-mappings.xml"/>
+            <property name="DetectOmissions" value="true"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Select CD by Loan -->
+    <endpoint-interaction portType="ClosingDB_ptt" operation="selectCDByLoan">
+        <interaction-spec className="oracle.tip.adapter.db.DBReadInteractionSpec">
+            <property name="DescriptorName" value="ClosingDB.ClosingDisclosure"/>
+            <property name="QueryObjectName" value="selectByLoanId"/>
+            <property name="MappingsMetaDataURL" value="ClosingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Insert CD Fee Item -->
+    <endpoint-interaction portType="ClosingDB_ptt" operation="insertCDFee">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="ClosingDB.CDFee"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="ClosingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Stored Procedure: Generate CD PDF -->
+    <endpoint-interaction portType="ClosingDB_ptt" operation="generateCDDocument">
+        <interaction-spec className="oracle.tip.adapter.db.DBStoredProcedureInteractionSpec">
+            <property name="SchemaName" value="LENDWISE"/>
+            <property name="PackageName" value="CLOSING_PKG"/>
+            <property name="ProcedureName" value="GENERATE_CD_DOCUMENT"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+</adapter-config>

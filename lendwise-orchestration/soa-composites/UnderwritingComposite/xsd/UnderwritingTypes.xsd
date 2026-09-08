@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://lendwise.com/soa/underwriting/types"
+            xmlns:tns="http://lendwise.com/soa/underwriting/types"
+            elementFormDefault="qualified">
+
+    <!-- ================================================================== -->
+    <!-- Underwriting Status Types                                          -->
+    <!-- ================================================================== -->
+
+    <xsd:simpleType name="UnderwritingStatusEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PENDING"/>
+            <xsd:enumeration value="IN_REVIEW"/>
+            <xsd:enumeration value="APPROVED"/>
+            <xsd:enumeration value="APPROVED_WITH_CONDITIONS"/>
+            <xsd:enumeration value="SUSPENDED"/>
+            <xsd:enumeration value="DENIED"/>
+            <xsd:enumeration value="COUNTER_OFFER"/>
+            <xsd:enumeration value="WITHDRAWN"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="AUSFindingsCodeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="APPROVE_ELIGIBLE"/>
+            <xsd:enumeration value="APPROVE_INELIGIBLE"/>
+            <xsd:enumeration value="REFER_ELIGIBLE"/>
+            <xsd:enumeration value="REFER_WITH_CAUTION"/>
+            <xsd:enumeration value="OUT_OF_SCOPE"/>
+            <xsd:enumeration value="ACCEPT"/>
+            <xsd:enumeration value="CAUTION"/>
+            <xsd:enumeration value="INELIGIBLE"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="ConditionTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PRIOR_TO_DOCS"/>
+            <xsd:enumeration value="PRIOR_TO_FUNDING"/>
+            <xsd:enumeration value="PRIOR_TO_CLOSING"/>
+            <xsd:enumeration value="POST_CLOSING"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Request/Response Types                                             -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="UnderwritingRequestType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="borrowerId" type="xsd:string"/>
+            <xsd:element name="borrowerSSN" type="xsd:string"/>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="purchasePrice" type="xsd:decimal"/>
+            <xsd:element name="propertyValue" type="xsd:decimal"/>
+            <xsd:element name="monthlyIncome" type="xsd:decimal"/>
+            <xsd:element name="monthlyDebt" type="xsd:decimal"/>
+            <xsd:element name="loanPurpose" type="xsd:string"/>
+            <xsd:element name="propertyType" type="xsd:string"/>
+            <xsd:element name="occupancyType" type="xsd:string"/>
+            <xsd:element name="loanType" type="xsd:string"/>
+            <xsd:element name="interestRate" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="loanTerm" type="xsd:int"/>
+            <xsd:element name="submittedBy" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="UnderwritingResultType">
+        <xsd:sequence>
+            <xsd:element name="decisionId" type="xsd:string"/>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="status" type="tns:UnderwritingStatusEnum"/>
+            <xsd:element name="riskScore" type="xsd:int"/>
+            <xsd:element name="ausFindingsCode" type="tns:AUSFindingsCodeEnum" minOccurs="0"/>
+            <xsd:element name="ausRecommendation" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="conditions" type="tns:ConditionListType" minOccurs="0"/>
+            <xsd:element name="creditInfo" type="tns:CreditSummaryType" minOccurs="0"/>
+            <xsd:element name="ratios" type="tns:LoanRatiosType" minOccurs="0"/>
+            <xsd:element name="decisionDate" type="xsd:dateTime"/>
+            <xsd:element name="expirationDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="underwriterId" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="notes" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Credit Types                                                       -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="CreditSummaryType">
+        <xsd:sequence>
+            <xsd:element name="ficoScore" type="xsd:int"/>
+            <xsd:element name="equifaxScore" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="experianScore" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="transunionScore" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="medianScore" type="xsd:int"/>
+            <xsd:element name="totalAccounts" type="xsd:int"/>
+            <xsd:element name="openAccounts" type="xsd:int"/>
+            <xsd:element name="totalBalance" type="xsd:decimal"/>
+            <xsd:element name="monthlyPayments" type="xsd:decimal"/>
+            <xsd:element name="creditHistoryMonths" type="xsd:int"/>
+            <xsd:element name="derogItems" type="xsd:int"/>
+            <xsd:element name="publicRecords" type="xsd:int"/>
+            <xsd:element name="inquiries30Days" type="xsd:int"/>
+            <xsd:element name="inquiries90Days" type="xsd:int"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Loan Ratio Types                                                   -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="LoanRatiosType">
+        <xsd:sequence>
+            <xsd:element name="ltv" type="xsd:decimal"/>
+            <xsd:element name="cltv" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="frontEndDTI" type="xsd:decimal"/>
+            <xsd:element name="backEndDTI" type="xsd:decimal"/>
+            <xsd:element name="piti" type="xsd:decimal"/>
+            <xsd:element name="housingRatio" type="xsd:decimal"/>
+            <xsd:element name="reservesMonths" type="xsd:int"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Condition Types                                                    -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ConditionListType">
+        <xsd:sequence>
+            <xsd:element name="condition" type="tns:ConditionType" maxOccurs="unbounded"/>
+            <xsd:element name="conditionText" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ConditionType">
+        <xsd:sequence>
+            <xsd:element name="conditionId" type="xsd:string"/>
+            <xsd:element name="type" type="tns:ConditionTypeEnum"/>
+            <xsd:element name="category" type="xsd:string"/>
+            <xsd:element name="description" type="xsd:string"/>
+            <xsd:element name="status" type="xsd:string"/>
+            <xsd:element name="responsibleParty" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="dueDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="clearedDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="clearedBy" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Decision Audit Types                                               -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="DecisionAuditType">
+        <xsd:sequence>
+            <xsd:element name="auditId" type="xsd:string"/>
+            <xsd:element name="decisionId" type="xsd:string"/>
+            <xsd:element name="action" type="xsd:string"/>
+            <xsd:element name="previousStatus" type="tns:UnderwritingStatusEnum" minOccurs="0"/>
+            <xsd:element name="newStatus" type="tns:UnderwritingStatusEnum"/>
+            <xsd:element name="performedBy" type="xsd:string"/>
+            <xsd:element name="performedAt" type="xsd:dateTime"/>
+            <xsd:element name="reason" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="PricingProcess"
+             targetNamespace="http://lendwise.com/soa/pricing"
+             xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://lendwise.com/soa/pricing"
+             xmlns:types="http://lendwise.com/soa/pricing/types"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:plnk="http://docs.oasis-open.org/wsbpel/2.0/plnktype">
+
+    <!-- Import XSD -->
+    <types>
+        <xsd:schema>
+            <xsd:import namespace="http://lendwise.com/soa/pricing/types"
+                        schemaLocation="xsd/PricingTypes.xsd"/>
+        </xsd:schema>
+    </types>
+
+    <!-- Messages -->
+    <message name="PricingRequest">
+        <part name="pricingRequest" element="types:PricingRequestType"/>
+    </message>
+    <message name="PricingResponse">
+        <part name="pricingResult" element="types:PricingResultType"/>
+    </message>
+    <message name="RateLockRequest">
+        <part name="lockRequest" element="types:RateLockType"/>
+    </message>
+    <message name="RateLockResponse">
+        <part name="lockResult" element="types:RateLockType"/>
+    </message>
+
+    <!-- Port Type -->
+    <portType name="PricingPortType">
+        <operation name="calculatePricing">
+            <input message="tns:PricingRequest"/>
+            <output message="tns:PricingResponse"/>
+        </operation>
+        <operation name="lockRate">
+            <input message="tns:RateLockRequest"/>
+            <output message="tns:RateLockResponse"/>
+        </operation>
+    </portType>
+
+    <!-- SOAP Binding -->
+    <binding name="PricingSOAPBinding" type="tns:PricingPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="calculatePricing">
+            <soap:operation soapAction="http://lendwise.com/soa/pricing/calculatePricing"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+        <operation name="lockRate">
+            <soap:operation soapAction="http://lendwise.com/soa/pricing/lockRate"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <!-- Service -->
+    <service name="PricingService">
+        <port name="PricingPort" binding="tns:PricingSOAPBinding">
+            <soap:address location="http://localhost:7001/soa-infra/services/lendwise/PricingEngineComposite/PricingService"/>
+        </port>
+    </service>
+
+    <!-- Partner Link Types -->
+    <plnk:partnerLinkType name="PricingPLT">
+        <plnk:role name="PricingProvider" portType="tns:PricingPortType"/>
+    </plnk:partnerLinkType>
+
+    <plnk:partnerLinkType name="PassthroughPLT">
+        <plnk:role name="PassthroughProvider" portType="tns:PricingPortType"/>
+    </plnk:partnerLinkType>
+
+</definitions>

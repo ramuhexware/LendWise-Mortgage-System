@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="ComplianceProcess"
+         targetNamespace="http://lendwise.com/soa/compliance/bpel"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:bpws="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:tns="http://lendwise.com/soa/compliance/bpel"
+         xmlns:comp="http://lendwise.com/soa/compliance"
+         xmlns:types="http://lendwise.com/soa/compliance/types"
+         xmlns:db="http://lendwise.com/soa/adapter/db">
+
+    <!-- ================================================================== -->
+    <!-- Partner Links                                                      -->
+    <!-- ================================================================== -->
+
+    <partnerLinks>
+        <partnerLink name="ComplianceClient"
+                     partnerLinkType="comp:CompliancePLT"
+                     myRole="ComplianceProvider"/>
+
+        <partnerLink name="ComplianceDB"
+                     partnerLinkType="db:ComplianceDBPLT"
+                     partnerRole="DatabaseProvider"/>
+
+        <partnerLink name="PassthroughComplianceService"
+                     partnerLinkType="comp:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+    </partnerLinks>
+
+    <!-- ================================================================== -->
+    <!-- Variables                                                          -->
+    <!-- ================================================================== -->
+
+    <variables>
+        <variable name="inputVariable" messageType="comp:ComplianceCheckRequest"/>
+        <variable name="outputVariable" messageType="comp:ComplianceCheckResponse"/>
+        <variable name="checkId" type="xsd:string"/>
+        <variable name="isQMEligible" type="xsd:boolean"/>
+        <variable name="tridCompliant" type="xsd:boolean"/>
+        <variable name="feeToleranceResult" element="types:FeeToleranceResultType"/>
+        <variable name="violations" element="types:ViolationListType"/>
+        <variable name="dbInsertRequest" messageType="db:ComplianceCheckCollection"/>
+    </variables>
+
+    <!-- ================================================================== -->
+    <!-- Main Sequence                                                      -->
+    <!-- ================================================================== -->
+
+    <sequence name="MainSequence">
+
+        <!-- Receive compliance check request -->
+        <receive name="ReceiveComplianceRequest"
+                 partnerLink="ComplianceClient"
+                 operation="runComplianceCheck"
+                 variable="inputVariable"
+                 createInstance="yes"/>
+
+        <!-- Generate Check ID -->
+        <assign name="GenerateCheckId">
+            <copy>
+                <from>ora:generateGUID()</from>
+                <to variable="checkId"/>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: TRID Compliance Check                          -->
+        <!-- Validates LE/CD timing, fee tolerances                         -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="CheckTRIDCompliance" language="java">
+            <![CDATA[
+                import java.time.LocalDate;
+                import java.time.temporal.ChronoUnit;
+
+                // Get dates from input
+                String applicationDateStr = (String)getVariableData("inputVariable", "complianceRequest", "/types:applicationDate");
+                String leDateStr = (String)getVariableData("inputVariable", "complianceRequest", "/types:loanEstimateDate");
+                String cdDateStr = (String)getVariableData("inputVariable", "complianceRequest", "/types:closingDisclosureDate");
+                String closingDateStr = (String)getVariableData("inputVariable", "complianceRequest", "/types:scheduledClosingDate");
+
+                LocalDate applicationDate = LocalDate.parse(applicationDateStr);
+                LocalDate leDate = leDateStr != null ? LocalDate.parse(leDateStr) : null;
+                LocalDate cdDate = cdDateStr != null ? LocalDate.parse(cdDateStr) : null;
+                LocalDate closingDate = closingDateStr != null ? LocalDate.parse(closingDateStr) : null;
+
+                StringBuilder violations = new StringBuilder();
+                boolean tridCompliant = true;
+
+                // TRID Rule 1: LE must be delivered within 3 business days of application
+                if (leDate != null) {
+                    long businessDays = ChronoUnit.DAYS.between(applicationDate, leDate);
+                    if (businessDays > 3) {
+                        violations.append("LE_TIMING_VIOLATION: Loan Estimate delivered after 3 business days|");
+                        tridCompliant = false;
+                    }
+                }
+
+                // TRID Rule 2: CD must be delivered at least 3 business days before closing
+                if (cdDate != null && closingDate != null) {
+                    long daysBeforeClosing = ChronoUnit.DAYS.between(cdDate, closingDate);
+                    if (daysBeforeClosing < 3) {
+                        violations.append("CD_TIMING_VIOLATION: Closing Disclosure delivered less than 3 days before closing|");
+                        tridCompliant = false;
+                    }
+                }
+
+                // TRID Rule 3: Check if waiting period reset is needed
+                // (APR increase > 0.125%, loan product change, prepayment penalty added)
+
+                setVariableData("tridCompliant", Boolean.toString(tridCompliant));
+                if (violations.length() > 0) {
+                    setVariableData("violations", "/types:ViolationListType/types:violationText", violations.toString());
+                }
+
+                addAuditTrailEntry("TRID Compliance Check Complete - Compliant: " + tridCompliant);
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: QM/ATR Compliance Check                        -->
+        <!-- 43% DTI cap, points & fees limits                              -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="CheckQMCompliance" language="java">
+            <![CDATA[
+                // Get loan data
+                double dti = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "complianceRequest", "/types:backEndDTI"));
+                double loanAmount = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "complianceRequest", "/types:loanAmount"));
+                double pointsAndFees = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "complianceRequest", "/types:pointsAndFees"));
+                String loanPurpose = (String)getVariableData("inputVariable", "complianceRequest", "/types:loanPurpose");
+
+                boolean isQMEligible = true;
+                String existingViolations = (String)getVariableData("violations", "/types:ViolationListType/types:violationText");
+                StringBuilder violations = new StringBuilder(existingViolations != null ? existingViolations : "");
+
+                // QM Rule 1: DTI cannot exceed 43% (with some exceptions for GSE eligible loans)
+                if (dti > 43.0) {
+                    violations.append("QM_DTI_VIOLATION: Back-end DTI exceeds 43% cap (" + String.format("%.2f", dti) + "%)|");
+                    isQMEligible = false;
+                }
+
+                // QM Rule 2: Points and fees limits (3% for loans >= $100k)
+                double pointsFeesLimit;
+                if (loanAmount >= 100000) {
+                    pointsFeesLimit = loanAmount * 0.03;
+                } else if (loanAmount >= 60000) {
+                    pointsFeesLimit = 3000;
+                } else if (loanAmount >= 20000) {
+                    pointsFeesLimit = loanAmount * 0.05;
+                } else if (loanAmount >= 12500) {
+                    pointsFeesLimit = 1000;
+                } else {
+                    pointsFeesLimit = loanAmount * 0.08;
+                }
+
+                if (pointsAndFees > pointsFeesLimit) {
+                    violations.append("QM_POINTS_FEES_VIOLATION: Points and fees exceed limit ($" +
+                        String.format("%.2f", pointsAndFees) + " > $" + String.format("%.2f", pointsFeesLimit) + ")|");
+                    isQMEligible = false;
+                }
+
+                // QM Rule 3: No negative amortization, interest-only, balloon (for QM)
+                // QM Rule 4: Loan term cannot exceed 30 years
+                // QM Rule 5: Must verify and document income/assets
+
+                setVariableData("isQMEligible", Boolean.toString(isQMEligible));
+                if (violations.length() > 0) {
+                    setVariableData("violations", "/types:ViolationListType/types:violationText", violations.toString());
+                }
+
+                addAuditTrailEntry("QM/ATR Compliance Check Complete - QM Eligible: " + isQMEligible +
+                    ", DTI: " + String.format("%.2f", dti) + "%, Points/Fees: $" + String.format("%.2f", pointsAndFees));
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- Invoke stored procedure to validate fee tolerances             -->
+        <!-- ============================================================== -->
+
+        <invoke name="ValidateFeeTolerances"
+                partnerLink="ComplianceDB"
+                operation="validateFeeTolerances"
+                inputVariable="inputVariable"
+                outputVariable="feeToleranceResult"/>
+
+        <!-- ============================================================== -->
+        <!-- Persist compliance check to database                           -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareDBInsert">
+            <copy>
+                <from variable="checkId"/>
+                <to>$dbInsertRequest.ComplianceCheckCollection/db:ComplianceCheck/db:checkId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.complianceRequest/types:loanId</from>
+                <to>$dbInsertRequest.ComplianceCheckCollection/db:ComplianceCheck/db:loanId</to>
+            </copy>
+            <copy>
+                <from variable="tridCompliant"/>
+                <to>$dbInsertRequest.ComplianceCheckCollection/db:ComplianceCheck/db:tridCompliant</to>
+            </copy>
+            <copy>
+                <from variable="isQMEligible"/>
+                <to>$dbInsertRequest.ComplianceCheckCollection/db:ComplianceCheck/db:qmEligible</to>
+            </copy>
+        </assign>
+
+        <invoke name="PersistComplianceCheck"
+                partnerLink="ComplianceDB"
+                operation="insertComplianceCheck"
+                inputVariable="dbInsertRequest"/>
+
+        <!-- Send to Gold Field via Pass-through -->
+        <invoke name="NotifyGoldField"
+                partnerLink="PassthroughComplianceService"
+                operation="createComplianceCheck"
+                inputVariable="inputVariable"/>
+
+        <!-- Prepare Response -->
+        <assign name="PrepareResponse">
+            <copy>
+                <from variable="checkId"/>
+                <to>$outputVariable.complianceResult/types:checkId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.complianceRequest/types:loanId</from>
+                <to>$outputVariable.complianceResult/types:loanId</to>
+            </copy>
+            <copy>
+                <from variable="tridCompliant"/>
+                <to>$outputVariable.complianceResult/types:tridCompliant</to>
+            </copy>
+            <copy>
+                <from variable="isQMEligible"/>
+                <to>$outputVariable.complianceResult/types:qmEligible</to>
+            </copy>
+            <copy>
+                <from variable="violations"/>
+                <to>$outputVariable.complianceResult/types:violations</to>
+            </copy>
+            <copy>
+                <from>$feeToleranceResult</from>
+                <to>$outputVariable.complianceResult/types:feeToleranceResult</to>
+            </copy>
+        </assign>
+
+        <!-- Reply -->
+        <reply name="ReplyToClient"
+               partnerLink="ComplianceClient"
+               operation="runComplianceCheck"
+               variable="outputVariable"/>
+
+    </sequence>
+
+</process>

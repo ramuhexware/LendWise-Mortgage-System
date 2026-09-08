@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<composite name="BorrowerIntakeComposite"
+           revision="1.0"
+           label="Borrower Intake and Pre-Qualification"
+           mode="active"
+           state="on"
+           xmlns="http://xmlns.oracle.com/sca/1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
+           xmlns:ui="http://xmlns.oracle.com/soa/designer/">
+
+    <!-- ================================================================== -->
+    <!-- Flow 1: Borrower Intake & Pre-Qualification Wizard                 -->
+    <!-- - Identity verification (KYC/CIP)                                  -->
+    <!-- - Income/Assets/Liabilities intake                                 -->
+    <!-- - DTI/LTV/PITI mathematical models (Java Adapter)                  -->
+    <!-- - Loan Estimate (LE) generation                                    -->
+    <!-- ================================================================== -->
+
+    <!-- Import WSDLs -->
+    <import namespace="http://lendwise.com/soa/borrower"
+            location="BorrowerIntakeProcess.wsdl"
+            importType="wsdl"/>
+    <import namespace="http://lendwise.com/soa/passthrough"
+            location="PassthroughService.wsdl"
+            importType="wsdl"/>
+
+    <!-- ================================================================== -->
+    <!-- Exposed Services (Entry Points)                                    -->
+    <!-- ================================================================== -->
+
+    <!-- SOAP Service Entry Point -->
+    <service name="BorrowerIntakeService" ui:wsdlLocation="BorrowerIntakeProcess.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/borrower#wsdl.interface(BorrowerIntakePortType)"/>
+        <binding.ws port="http://lendwise.com/soa/borrower#wsdl.endpoint(BorrowerIntakeService/BorrowerIntakePort)"
+                    location="http://localhost:7001/soa-infra/services/default/BorrowerIntakeComposite/BorrowerIntakeService?WSDL">
+            <wsp:PolicyReference URI="oracle/wss_username_token_service_policy" orawsp:category="security" orawsp:status="enabled"/>
+        </binding.ws>
+    </service>
+
+    <!-- REST Service Entry Point -->
+    <service name="BorrowerIntakeRESTService" ui:wsdlLocation="BorrowerIntakeProcess.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/borrower#wsdl.interface(BorrowerIntakePortType)"/>
+        <binding.rest port="http://lendwise.com/soa/borrower#wsdl.endpoint(BorrowerIntakeRESTService/BorrowerIntakeRESTPort)"
+                      location="/borrower/intake"/>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- BPEL Component                                                     -->
+    <!-- ================================================================== -->
+
+    <component name="BorrowerIntakeProcess" version="2.0">
+        <implementation.bpel src="BorrowerIntakeProcess.bpel"/>
+        <componentType>
+            <!-- Service Interface -->
+            <service name="BorrowerIntakeService">
+                <interface.wsdl interface="http://lendwise.com/soa/borrower#wsdl.interface(BorrowerIntakePortType)"/>
+            </service>
+
+            <!-- References to External Services -->
+            <reference name="PassthroughServiceRef">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+            <reference name="KYCServiceRef">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+        </componentType>
+    </component>
+
+    <!-- ================================================================== -->
+    <!-- External References                                                -->
+    <!-- ================================================================== -->
+
+    <!-- Pass-through Service (REST) - Routes to Gold Field borrower-service -->
+    <reference name="PassthroughServiceRef" ui:wsdlLocation="PassthroughService.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/borrowers"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- KYC Service (REST) - Routes to Gold Field kyc-service -->
+    <reference name="KYCServiceRef" ui:wsdlLocation="PassthroughService.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/kyc/verify"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- ================================================================== -->
+    <!-- Wiring                                                             -->
+    <!-- ================================================================== -->
+
+    <!-- Wire entry points to BPEL process -->
+    <wire>
+        <source.uri>BorrowerIntakeService</source.uri>
+        <target.uri>BorrowerIntakeProcess/BorrowerIntakeService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>BorrowerIntakeRESTService</source.uri>
+        <target.uri>BorrowerIntakeProcess/BorrowerIntakeService</target.uri>
+    </wire>
+
+    <!-- Wire BPEL process to external references -->
+    <wire>
+        <source.uri>BorrowerIntakeProcess/PassthroughServiceRef</source.uri>
+        <target.uri>PassthroughServiceRef</target.uri>
+    </wire>
+    <wire>
+        <source.uri>BorrowerIntakeProcess/KYCServiceRef</source.uri>
+        <target.uri>KYCServiceRef</target.uri>
+    </wire>
+
+</composite>

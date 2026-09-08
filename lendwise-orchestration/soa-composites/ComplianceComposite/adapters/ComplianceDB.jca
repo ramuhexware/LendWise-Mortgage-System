@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="ComplianceDB"
+                adapter="db"
+                wsdlLocation="ComplianceDB.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- Database Adapter - Compliance Checks                               -->
+    <!-- Provides operations for compliance_checks, trid_tracking tables    -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/DB/LendWiseDS"
+                        UIConnectionName="LendWiseDS"
+                        adapterRef=""/>
+
+    <!-- Insert Compliance Check -->
+    <endpoint-interaction portType="ComplianceDB_ptt" operation="insertComplianceCheck">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="ComplianceDB.ComplianceCheck"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="ComplianceDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Select Compliance Checks by Loan -->
+    <endpoint-interaction portType="ComplianceDB_ptt" operation="selectChecksByLoan">
+        <interaction-spec className="oracle.tip.adapter.db.DBReadInteractionSpec">
+            <property name="DescriptorName" value="ComplianceDB.ComplianceCheck"/>
+            <property name="QueryObjectName" value="selectByLoanId"/>
+            <property name="MappingsMetaDataURL" value="ComplianceDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Insert TRID Tracking Entry -->
+    <endpoint-interaction portType="ComplianceDB_ptt" operation="insertTRIDEntry">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="ComplianceDB.TRIDTracking"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="ComplianceDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Update TRID Entry -->
+    <endpoint-interaction portType="ComplianceDB_ptt" operation="updateTRIDEntry">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="ComplianceDB.TRIDTracking"/>
+            <property name="DmlType" value="UPDATE"/>
+            <property name="MappingsMetaDataURL" value="ComplianceDB-or-mappings.xml"/>
+            <property name="DetectOmissions" value="true"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Stored Procedure: Validate Fee Tolerances -->
+    <endpoint-interaction portType="ComplianceDB_ptt" operation="validateFeeTolerances">
+        <interaction-spec className="oracle.tip.adapter.db.DBStoredProcedureInteractionSpec">
+            <property name="SchemaName" value="LENDWISE"/>
+            <property name="PackageName" value="COMPLIANCE_PKG"/>
+            <property name="ProcedureName" value="VALIDATE_FEE_TOLERANCES"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Stored Procedure: Check QM Eligibility -->
+    <endpoint-interaction portType="ComplianceDB_ptt" operation="checkQMEligibility">
+        <interaction-spec className="oracle.tip.adapter.db.DBStoredProcedureInteractionSpec">
+            <property name="SchemaName" value="LENDWISE"/>
+            <property name="PackageName" value="COMPLIANCE_PKG"/>
+            <property name="ProcedureName" value="CHECK_QM_ELIGIBILITY"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+</adapter-config>

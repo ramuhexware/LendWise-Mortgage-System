@@ -1,0 +1,146 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["borrowerId", "loanId"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "borrowerId": { "bsonType": "string" },
+      "loanId": { "bsonType": "string" },
+      "ssn": { "bsonType": "string" },
+      "pullDate": { "bsonType": "date" },
+      "scores": {
+        "bsonType": "object",
+        "properties": {
+          "ficoScore": { "bsonType": "int", "minimum": 300, "maximum": 850 },
+          "experianScore": { "bsonType": "int", "minimum": 300, "maximum": 850 },
+          "equifaxScore": { "bsonType": "int", "minimum": 300, "maximum": 850 },
+          "transunionScore": { "bsonType": "int", "minimum": 300, "maximum": 850 },
+          "scoreModel": {
+            "bsonType": "string",
+            "enum": ["FICO8", "FICO9", "FICO_AUTO", "FICO_MORTGAGE", "VANTAGE3", "VANTAGE4"]
+          },
+          "representativeScore": { "bsonType": "int" },
+          "representativeBureau": { "bsonType": "string" }
+        }
+      },
+      "summary": {
+        "bsonType": "object",
+        "properties": {
+          "totalAccounts": { "bsonType": "int" },
+          "openAccounts": { "bsonType": "int" },
+          "closedAccounts": { "bsonType": "int" },
+          "delinquentAccounts": { "bsonType": "int" },
+          "derogatoryMarks": { "bsonType": "int" },
+          "publicRecords": { "bsonType": "int" },
+          "inquiriesLast6Months": { "bsonType": "int" },
+          "inquiriesLast12Months": { "bsonType": "int" },
+          "oldestAccountDate": { "bsonType": "date" },
+          "averageAccountAge": { "bsonType": "double" },
+          "totalBalance": { "bsonType": "decimal" },
+          "totalHighCredit": { "bsonType": "decimal" },
+          "revolvingUtilization": { "bsonType": "double" },
+          "installmentBalance": { "bsonType": "decimal" },
+          "mortgageBalance": { "bsonType": "decimal" }
+        }
+      },
+      "tradelines": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "creditorName": { "bsonType": "string" },
+            "accountNumber": { "bsonType": "string" },
+            "accountType": {
+              "bsonType": "string",
+              "enum": ["REVOLVING", "INSTALLMENT", "MORTGAGE", "AUTO", "STUDENT", "HELOC", "OTHER"]
+            },
+            "accountStatus": {
+              "bsonType": "string",
+              "enum": ["OPEN", "CLOSED", "PAID", "CHARGED_OFF", "COLLECTION"]
+            },
+            "openDate": { "bsonType": "date" },
+            "closeDate": { "bsonType": "date" },
+            "highCredit": { "bsonType": "decimal" },
+            "creditLimit": { "bsonType": "decimal" },
+            "currentBalance": { "bsonType": "decimal" },
+            "monthlyPayment": { "bsonType": "decimal" },
+            "paymentStatus": {
+              "bsonType": "string",
+              "enum": ["CURRENT", "30_DAYS", "60_DAYS", "90_DAYS", "120_DAYS", "COLLECTION", "CHARGED_OFF"]
+            },
+            "paymentHistory": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "properties": {
+                  "month": { "bsonType": "date" },
+                  "status": { "bsonType": "string" }
+                }
+              }
+            },
+            "late30Count": { "bsonType": "int" },
+            "late60Count": { "bsonType": "int" },
+            "late90Count": { "bsonType": "int" },
+            "reportingBureau": { "bsonType": "string" }
+          }
+        }
+      },
+      "publicRecords": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "recordType": {
+              "bsonType": "string",
+              "enum": ["BANKRUPTCY", "JUDGMENT", "TAX_LIEN", "FORECLOSURE"]
+            },
+            "filedDate": { "bsonType": "date" },
+            "amount": { "bsonType": "decimal" },
+            "status": { "bsonType": "string" },
+            "court": { "bsonType": "string" },
+            "caseNumber": { "bsonType": "string" }
+          }
+        }
+      },
+      "inquiries": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "inquirer": { "bsonType": "string" },
+            "inquiryDate": { "bsonType": "date" },
+            "inquiryType": {
+              "bsonType": "string",
+              "enum": ["HARD", "SOFT"]
+            },
+            "bureau": { "bsonType": "string" }
+          }
+        }
+      },
+      "bureauResponses": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "bureau": { "bsonType": "string" },
+            "requestDate": { "bsonType": "date" },
+            "responseDate": { "bsonType": "date" },
+            "status": {
+              "bsonType": "string",
+              "enum": ["SUCCESS", "ERROR", "TIMEOUT", "NO_HIT"]
+            },
+            "errorCode": { "bsonType": "string" },
+            "errorMessage": { "bsonType": "string" }
+          }
+        }
+      },
+      "status": {
+        "bsonType": "string",
+        "enum": ["PENDING", "IN_PROGRESS", "COMPLETE", "PARTIAL", "FAILED", "EXPIRED"]
+      },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" },
+      "expiresAt": { "bsonType": "date" }
+    }
+  }
+}

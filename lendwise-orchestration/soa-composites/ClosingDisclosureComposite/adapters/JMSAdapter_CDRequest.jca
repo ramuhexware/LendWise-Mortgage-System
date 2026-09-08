@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="JMSAdapter_CDRequest"
+                adapter="jms"
+                wsdlLocation="JMSAdapter_CDRequest.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- JMS Adapter - CD Request Queue (Inbound)                           -->
+    <!-- Listens for Closing Disclosure generation requests                 -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/wls/LendWiseJMSConnectionFactory"
+                        UIJmsProvider="WLSJMS"
+                        adapterRef=""/>
+
+    <endpoint-activation portType="Consume_ptt" operation="Consume">
+        <activation-spec className="oracle.tip.adapter.jms.inbound.JmsConsumeActivationSpec">
+            <!-- JMS Destination -->
+            <property name="DestinationName" value="jms/lendwise/CDRequestQueue"/>
+            <property name="UseMessageListener" value="true"/>
+
+            <!-- Message Type -->
+            <property name="PayloadType" value="TextMessage"/>
+
+            <!-- Message Selector (optional - filter messages) -->
+            <property name="MessageSelector" value=""/>
+
+            <!-- Durable Subscription (for topics) -->
+            <property name="DurableSubscriber" value="false"/>
+
+            <!-- Transaction Settings -->
+            <property name="UseXa" value="true"/>
+
+            <!-- Thread Count -->
+            <property name="Adapter.jms.receive.threads" value="3"/>
+
+            <!-- Polling Interval (milliseconds) -->
+            <property name="PollingInterval" value="5000"/>
+
+            <!-- Message Acknowledgement Mode -->
+            <property name="AcknowledgeMode" value="AUTO_ACKNOWLEDGE"/>
+        </activation-spec>
+    </endpoint-activation>
+
+</adapter-config>

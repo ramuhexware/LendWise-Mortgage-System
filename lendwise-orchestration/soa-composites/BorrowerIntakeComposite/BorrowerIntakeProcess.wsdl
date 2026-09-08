@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="BorrowerIntakeService"
+             targetNamespace="http://lendwise.com/soa/borrower"
+             xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://lendwise.com/soa/borrower"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:types="http://lendwise.com/soa/borrower/types"
+             xmlns:plnk="http://docs.oasis-open.org/wsbpel/2.0/plnktype">
+
+    <!-- ================================================================== -->
+    <!-- Types                                                              -->
+    <!-- ================================================================== -->
+    <types>
+        <xsd:schema targetNamespace="http://lendwise.com/soa/borrower/types">
+            <xsd:import namespace="http://lendwise.com/soa/borrower/types"
+                        schemaLocation="xsd/BorrowerTypes.xsd"/>
+        </xsd:schema>
+    </types>
+
+    <!-- ================================================================== -->
+    <!-- Messages                                                           -->
+    <!-- ================================================================== -->
+
+    <!-- Submit Borrower Application -->
+    <message name="SubmitBorrowerApplicationRequest">
+        <part name="borrowerApplication" type="types:BorrowerApplicationType"/>
+    </message>
+    <message name="SubmitBorrowerApplicationResponse">
+        <part name="applicationResult" type="types:ApplicationResultType"/>
+    </message>
+
+    <!-- Pre-Qualification -->
+    <message name="PreQualifyRequest">
+        <part name="preQualificationData" type="types:PreQualificationDataType"/>
+    </message>
+    <message name="PreQualifyResponse">
+        <part name="preQualificationResult" type="types:PreQualificationResultType"/>
+    </message>
+
+    <!-- Get Loan Estimate -->
+    <message name="GetLoanEstimateRequest">
+        <part name="loanId" type="xsd:string"/>
+    </message>
+    <message name="GetLoanEstimateResponse">
+        <part name="loanEstimate" type="types:LoanEstimateType"/>
+    </message>
+
+    <!-- Calculate Ratios (DTI/LTV/PITI) -->
+    <message name="CalculateRatiosRequest">
+        <part name="ratioInput" type="types:RatioInputType"/>
+    </message>
+    <message name="CalculateRatiosResponse">
+        <part name="ratioOutput" type="types:RatioOutputType"/>
+    </message>
+
+    <!-- Fault Message -->
+    <message name="BorrowerFault">
+        <part name="faultInfo" type="types:FaultType"/>
+    </message>
+
+    <!-- ================================================================== -->
+    <!-- Port Type                                                          -->
+    <!-- ================================================================== -->
+
+    <portType name="BorrowerIntakePortType">
+        <operation name="submitBorrowerApplication">
+            <documentation>Submit a new borrower application for pre-qualification</documentation>
+            <input message="tns:SubmitBorrowerApplicationRequest"/>
+            <output message="tns:SubmitBorrowerApplicationResponse"/>
+            <fault name="fault" message="tns:BorrowerFault"/>
+        </operation>
+
+        <operation name="preQualify">
+            <documentation>Perform pre-qualification analysis</documentation>
+            <input message="tns:PreQualifyRequest"/>
+            <output message="tns:PreQualifyResponse"/>
+            <fault name="fault" message="tns:BorrowerFault"/>
+        </operation>
+
+        <operation name="getLoanEstimate">
+            <documentation>Generate and retrieve Loan Estimate document</documentation>
+            <input message="tns:GetLoanEstimateRequest"/>
+            <output message="tns:GetLoanEstimateResponse"/>
+            <fault name="fault" message="tns:BorrowerFault"/>
+        </operation>
+
+        <operation name="calculateRatios">
+            <documentation>Calculate DTI, LTV, and PITI ratios</documentation>
+            <input message="tns:CalculateRatiosRequest"/>
+            <output message="tns:CalculateRatiosResponse"/>
+            <fault name="fault" message="tns:BorrowerFault"/>
+        </operation>
+    </portType>
+
+    <!-- ================================================================== -->
+    <!-- Binding                                                            -->
+    <!-- ================================================================== -->
+
+    <binding name="BorrowerIntakeBinding" type="tns:BorrowerIntakePortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+        <operation name="submitBorrowerApplication">
+            <soap:operation soapAction="http://lendwise.com/soa/borrower/submitBorrowerApplication"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+            <fault name="fault"><soap:fault name="fault" use="literal"/></fault>
+        </operation>
+
+        <operation name="preQualify">
+            <soap:operation soapAction="http://lendwise.com/soa/borrower/preQualify"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+            <fault name="fault"><soap:fault name="fault" use="literal"/></fault>
+        </operation>
+
+        <operation name="getLoanEstimate">
+            <soap:operation soapAction="http://lendwise.com/soa/borrower/getLoanEstimate"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+            <fault name="fault"><soap:fault name="fault" use="literal"/></fault>
+        </operation>
+
+        <operation name="calculateRatios">
+            <soap:operation soapAction="http://lendwise.com/soa/borrower/calculateRatios"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+            <fault name="fault"><soap:fault name="fault" use="literal"/></fault>
+        </operation>
+    </binding>
+
+    <!-- ================================================================== -->
+    <!-- Service                                                            -->
+    <!-- ================================================================== -->
+
+    <service name="BorrowerIntakeService">
+        <port name="BorrowerIntakePort" binding="tns:BorrowerIntakeBinding">
+            <soap:address location="http://localhost:7001/soa-infra/services/default/BorrowerIntakeComposite/BorrowerIntakeService"/>
+        </port>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- Partner Link Types                                                 -->
+    <!-- ================================================================== -->
+
+    <plnk:partnerLinkType name="BorrowerIntakePLT">
+        <plnk:role name="BorrowerIntakeProvider" portType="tns:BorrowerIntakePortType"/>
+    </plnk:partnerLinkType>
+
+</definitions>

@@ -1,0 +1,145 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["ssn", "firstName", "lastName", "email"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "ssn": {
+        "bsonType": "string",
+        "pattern": "^[0-9]{3}-[0-9]{2}-[0-9]{4}$",
+        "description": "Social Security Number in XXX-XX-XXXX format"
+      },
+      "firstName": { "bsonType": "string", "maxLength": 100 },
+      "lastName": { "bsonType": "string", "maxLength": 100 },
+      "middleName": { "bsonType": "string", "maxLength": 100 },
+      "dateOfBirth": { "bsonType": "date" },
+      "email": {
+        "bsonType": "string",
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      },
+      "phone": { "bsonType": "string" },
+      "citizenshipStatus": {
+        "bsonType": "string",
+        "enum": ["US_CITIZEN", "PERMANENT_RESIDENT", "NON_PERMANENT_RESIDENT", "OTHER"]
+      },
+      "maritalStatus": {
+        "bsonType": "string",
+        "enum": ["SINGLE", "MARRIED", "SEPARATED", "DIVORCED", "WIDOWED"]
+      },
+      "dependentsCount": { "bsonType": "int", "minimum": 0, "maximum": 20 },
+      "currentAddress": {
+        "bsonType": "object",
+        "required": ["street", "city", "state", "zip"],
+        "properties": {
+          "street": { "bsonType": "string" },
+          "unit": { "bsonType": "string" },
+          "city": { "bsonType": "string" },
+          "state": { "bsonType": "string", "maxLength": 2 },
+          "zip": { "bsonType": "string", "pattern": "^[0-9]{5}(-[0-9]{4})?$" },
+          "yearsAtAddress": { "bsonType": "double" },
+          "housingType": {
+            "bsonType": "string",
+            "enum": ["OWN", "RENT", "LIVING_RENT_FREE", "OTHER"]
+          },
+          "monthlyPayment": { "bsonType": "decimal" }
+        }
+      },
+      "previousAddresses": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "street": { "bsonType": "string" },
+            "unit": { "bsonType": "string" },
+            "city": { "bsonType": "string" },
+            "state": { "bsonType": "string" },
+            "zip": { "bsonType": "string" },
+            "yearsAtAddress": { "bsonType": "double" },
+            "fromDate": { "bsonType": "date" },
+            "toDate": { "bsonType": "date" }
+          }
+        }
+      },
+      "employment": {
+        "bsonType": "object",
+        "properties": {
+          "employer": { "bsonType": "string" },
+          "employerAddress": { "bsonType": "string" },
+          "employerPhone": { "bsonType": "string" },
+          "position": { "bsonType": "string" },
+          "employmentType": {
+            "bsonType": "string",
+            "enum": ["FULL_TIME", "PART_TIME", "SELF_EMPLOYED", "RETIRED", "UNEMPLOYED"]
+          },
+          "startDate": { "bsonType": "date" },
+          "yearsInProfession": { "bsonType": "double" },
+          "monthlyIncome": { "bsonType": "decimal" },
+          "bonusIncome": { "bsonType": "decimal" },
+          "commissionIncome": { "bsonType": "decimal" },
+          "overtimeIncome": { "bsonType": "decimal" }
+        }
+      },
+      "previousEmployment": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "employer": { "bsonType": "string" },
+            "position": { "bsonType": "string" },
+            "startDate": { "bsonType": "date" },
+            "endDate": { "bsonType": "date" },
+            "monthlyIncome": { "bsonType": "decimal" }
+          }
+        }
+      },
+      "assets": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "required": ["type", "balance"],
+          "properties": {
+            "type": {
+              "bsonType": "string",
+              "enum": ["CHECKING", "SAVINGS", "MONEY_MARKET", "CD", "RETIREMENT_401K", "RETIREMENT_IRA", "STOCKS", "BONDS", "REAL_ESTATE", "OTHER"]
+            },
+            "institution": { "bsonType": "string" },
+            "accountNumber": { "bsonType": "string" },
+            "balance": { "bsonType": "decimal" },
+            "verificationStatus": {
+              "bsonType": "string",
+              "enum": ["PENDING", "VERIFIED", "FAILED"]
+            }
+          }
+        }
+      },
+      "liabilities": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "required": ["type", "monthlyPayment"],
+          "properties": {
+            "type": {
+              "bsonType": "string",
+              "enum": ["MORTGAGE", "HELOC", "AUTO_LOAN", "STUDENT_LOAN", "CREDIT_CARD", "INSTALLMENT", "CHILD_SUPPORT", "ALIMONY", "OTHER"]
+            },
+            "creditor": { "bsonType": "string" },
+            "accountNumber": { "bsonType": "string" },
+            "balance": { "bsonType": "decimal" },
+            "monthlyPayment": { "bsonType": "decimal" },
+            "monthsRemaining": { "bsonType": "int" },
+            "willBePaidOff": { "bsonType": "bool" }
+          }
+        }
+      },
+      "kycStatus": {
+        "bsonType": "string",
+        "enum": ["PENDING", "IN_PROGRESS", "VERIFIED", "FAILED", "EXPIRED"]
+      },
+      "kycVerificationDate": { "bsonType": "date" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" },
+      "createdBy": { "bsonType": "string" },
+      "updatedBy": { "bsonType": "string" }
+    }
+  }
+}

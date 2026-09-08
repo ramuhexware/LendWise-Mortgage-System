@@ -1,0 +1,117 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "auditType", "auditResult"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "auditType": {
+        "bsonType": "string",
+        "enum": ["TRID_TIMING", "FEE_TOLERANCE", "QM_ATR", "HMDA", "ECOA", "RESPA", "STATE_SPECIFIC", "COMPREHENSIVE"]
+      },
+      "auditSubtype": { "bsonType": "string" },
+      "ruleId": { "bsonType": "string" },
+      "auditResult": {
+        "bsonType": "string",
+        "enum": ["PASS", "FAIL", "WARNING", "NOT_APPLICABLE", "PENDING_REVIEW"]
+      },
+      "auditScore": { "bsonType": "double" },
+      "auditDate": { "bsonType": "date" },
+      "auditorId": { "bsonType": "string" },
+      "auditorType": {
+        "bsonType": "string",
+        "enum": ["SYSTEM", "MANUAL", "QC", "POST_CLOSE"]
+      },
+      "findings": {
+        "bsonType": "object",
+        "properties": {
+          "description": { "bsonType": "string" },
+          "actualValue": { "bsonType": "string" },
+          "expectedValue": { "bsonType": "string" },
+          "variance": { "bsonType": "double" },
+          "regulationCite": { "bsonType": "string" }
+        }
+      },
+      "tridDetails": {
+        "bsonType": "object",
+        "properties": {
+          "disclosureType": { "bsonType": "string" },
+          "disclosureVersion": { "bsonType": "int" },
+          "issueDate": { "bsonType": "date" },
+          "deliveryDate": { "bsonType": "date" },
+          "applicationDate": { "bsonType": "date" },
+          "closingDate": { "bsonType": "date" },
+          "businessDaysRequired": { "bsonType": "int" },
+          "businessDaysActual": { "bsonType": "int" }
+        }
+      },
+      "feeToleranceDetails": {
+        "bsonType": "object",
+        "properties": {
+          "toleranceType": {
+            "bsonType": "string",
+            "enum": ["ZERO", "TEN_PERCENT", "NO_LIMIT"]
+          },
+          "leAmount": { "bsonType": "decimal" },
+          "cdAmount": { "bsonType": "decimal" },
+          "variance": { "bsonType": "decimal" },
+          "variancePercent": { "bsonType": "double" },
+          "feeName": { "bsonType": "string" },
+          "feeCategory": { "bsonType": "string" }
+        }
+      },
+      "qmAtrDetails": {
+        "bsonType": "object",
+        "properties": {
+          "isQualifiedMortgage": { "bsonType": "bool" },
+          "qmType": {
+            "bsonType": "string",
+            "enum": ["GENERAL", "SAFE_HARBOR", "REBUTTABLE_PRESUMPTION", "SEASONED", "NONE"]
+          },
+          "dtiAtOrigination": { "bsonType": "double" },
+          "dtiCap": { "bsonType": "double" },
+          "pointsAndFeesPercent": { "bsonType": "double" },
+          "pointsAndFeesCap": { "bsonType": "double" },
+          "hasNegativeAmortization": { "bsonType": "bool" },
+          "hasInterestOnly": { "bsonType": "bool" },
+          "hasBalloonPayment": { "bsonType": "bool" },
+          "termExceeds30Years": { "bsonType": "bool" },
+          "incomeVerified": { "bsonType": "bool" },
+          "assetsVerified": { "bsonType": "bool" },
+          "employmentVerified": { "bsonType": "bool" }
+        }
+      },
+      "defects": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "defectId": { "bsonType": "string" },
+            "defectCode": { "bsonType": "string" },
+            "category": { "bsonType": "string" },
+            "severity": {
+              "bsonType": "string",
+              "enum": ["FATAL", "MODERATE", "LOW"]
+            },
+            "description": { "bsonType": "string" },
+            "impactAssessment": { "bsonType": "string" },
+            "rootCause": { "bsonType": "string" },
+            "status": {
+              "bsonType": "string",
+              "enum": ["OPEN", "IN_REMEDIATION", "REMEDIATED", "WAIVED", "ESCALATED"]
+            },
+            "remediationPlan": { "bsonType": "string" },
+            "remediatedDate": { "bsonType": "date" },
+            "remediatedBy": { "bsonType": "string" }
+          }
+        }
+      },
+      "remediationAction": { "bsonType": "string" },
+      "reviewed": { "bsonType": "bool" },
+      "reviewedBy": { "bsonType": "string" },
+      "reviewedDate": { "bsonType": "date" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<composite name="PricingEngineComposite"
+           revision="1.0"
+           label="Rate Lock, Pricing Engine, LLPA Calculation"
+           mode="active"
+           state="on"
+           xmlns="http://xmlns.oracle.com/sca/1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
+           xmlns:ui="http://xmlns.oracle.com/soa/designer/">
+
+    <!-- ================================================================== -->
+    <!-- Flow 5: Pricing Engine                                             -->
+    <!-- - Rate lock management                                             -->
+    <!-- - LLPA (Loan Level Price Adjustments) calculation                  -->
+    <!-- - Amortization schedule generation                                 -->
+    <!-- - Best execution pricing                                           -->
+    <!-- ================================================================== -->
+
+    <!-- Import WSDLs -->
+    <import namespace="http://lendwise.com/soa/pricing"
+            location="PricingProcess.wsdl"
+            importType="wsdl"/>
+
+    <!-- ================================================================== -->
+    <!-- Exposed Services                                                   -->
+    <!-- ================================================================== -->
+
+    <service name="PricingService" ui:wsdlLocation="PricingProcess.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/pricing#wsdl.interface(PricingPortType)"/>
+        <binding.ws port="http://lendwise.com/soa/pricing#wsdl.endpoint(PricingService/PricingPort)"/>
+    </service>
+
+    <service name="PricingRESTService">
+        <interface.wsdl interface="http://lendwise.com/soa/pricing#wsdl.interface(PricingPortType)"/>
+        <binding.rest location="/pricing/api"
+                      method="POST"
+                      contentType="application/json"/>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- BPEL Component                                                     -->
+    <!-- ================================================================== -->
+
+    <component name="PricingProcess" version="2.0">
+        <implementation.bpel src="PricingProcess.bpel"/>
+        <componentType>
+            <service name="PricingService">
+                <interface.wsdl interface="http://lendwise.com/soa/pricing#wsdl.interface(PricingPortType)"/>
+            </service>
+
+            <reference name="PricingDB">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(PricingDB_ptt)"/>
+            </reference>
+            <reference name="InvestorPricingService">
+                <interface.wsdl interface="http://lendwise.com/soa/investor#wsdl.interface(InvestorPricingPortType)"/>
+            </reference>
+            <reference name="PassthroughPricingService">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+        </componentType>
+    </component>
+
+    <!-- ================================================================== -->
+    <!-- External References                                                -->
+    <!-- ================================================================== -->
+
+    <!-- Database Adapter - Pricing/Rate locks -->
+    <reference name="PricingDB" ui:wsdlLocation="adapters/PricingDB.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(PricingDB_ptt)"/>
+        <binding.jca config="adapters/PricingDB.jca"/>
+    </reference>
+
+    <!-- Investor Pricing Service (Fannie/Freddie daily pricing) -->
+    <reference name="InvestorPricingService">
+        <interface.wsdl interface="http://lendwise.com/soa/investor#wsdl.interface(InvestorPricingPortType)"/>
+        <binding.ws port="http://lendwise.com/soa/investor#wsdl.endpoint(InvestorPricingService/InvestorPricingPort)"
+                    location="${INVESTOR_PRICING_ENDPOINT}"/>
+    </reference>
+
+    <!-- Pass-through to Gold Field pricing-service -->
+    <reference name="PassthroughPricingService">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/pricing"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- ================================================================== -->
+    <!-- Wiring                                                             -->
+    <!-- ================================================================== -->
+
+    <wire>
+        <source.uri>PricingService</source.uri>
+        <target.uri>PricingProcess/PricingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>PricingRESTService</source.uri>
+        <target.uri>PricingProcess/PricingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>PricingProcess/PricingDB</source.uri>
+        <target.uri>PricingDB</target.uri>
+    </wire>
+    <wire>
+        <source.uri>PricingProcess/InvestorPricingService</source.uri>
+        <target.uri>InvestorPricingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>PricingProcess/PassthroughPricingService</source.uri>
+        <target.uri>PassthroughPricingService</target.uri>
+    </wire>
+
+</composite>

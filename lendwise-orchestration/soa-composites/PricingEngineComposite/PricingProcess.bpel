@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="PricingProcess"
+         targetNamespace="http://lendwise.com/soa/pricing/bpel"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:bpws="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:tns="http://lendwise.com/soa/pricing/bpel"
+         xmlns:pricing="http://lendwise.com/soa/pricing"
+         xmlns:types="http://lendwise.com/soa/pricing/types"
+         xmlns:db="http://lendwise.com/soa/adapter/db"
+         xmlns:investor="http://lendwise.com/soa/investor">
+
+    <!-- ================================================================== -->
+    <!-- Partner Links                                                      -->
+    <!-- ================================================================== -->
+
+    <partnerLinks>
+        <partnerLink name="PricingClient"
+                     partnerLinkType="pricing:PricingPLT"
+                     myRole="PricingProvider"/>
+
+        <partnerLink name="PricingDB"
+                     partnerLinkType="db:PricingDBPLT"
+                     partnerRole="DatabaseProvider"/>
+
+        <partnerLink name="InvestorPricingService"
+                     partnerLinkType="investor:InvestorPricingPLT"
+                     partnerRole="InvestorPricingProvider"/>
+
+        <partnerLink name="PassthroughPricingService"
+                     partnerLinkType="pricing:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+    </partnerLinks>
+
+    <!-- ================================================================== -->
+    <!-- Variables                                                          -->
+    <!-- ================================================================== -->
+
+    <variables>
+        <variable name="inputVariable" messageType="pricing:PricingRequest"/>
+        <variable name="outputVariable" messageType="pricing:PricingResponse"/>
+        <variable name="lockId" type="xsd:string"/>
+        <variable name="baseRate" type="xsd:decimal"/>
+        <variable name="llpaAdjustment" type="xsd:decimal"/>
+        <variable name="finalRate" type="xsd:decimal"/>
+        <variable name="monthlyPayment" type="xsd:decimal"/>
+        <variable name="amortizationSchedule" element="types:AmortizationScheduleType"/>
+        <variable name="investorPriceRequest" messageType="investor:InvestorPriceRequest"/>
+        <variable name="investorPriceResponse" messageType="investor:InvestorPriceResponse"/>
+        <variable name="dbInsertRequest" messageType="db:RateLockCollection"/>
+    </variables>
+
+    <!-- ================================================================== -->
+    <!-- Main Sequence                                                      -->
+    <!-- ================================================================== -->
+
+    <sequence name="MainSequence">
+
+        <!-- Receive pricing request -->
+        <receive name="ReceivePricingRequest"
+                 partnerLink="PricingClient"
+                 operation="calculatePricing"
+                 variable="inputVariable"
+                 createInstance="yes"/>
+
+        <!-- Generate Lock ID -->
+        <assign name="GenerateLockId">
+            <copy>
+                <from>ora:generateGUID()</from>
+                <to variable="lockId"/>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Get current investor pricing                                   -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareInvestorRequest">
+            <copy>
+                <from>$inputVariable.pricingRequest/types:loanType</from>
+                <to>$investorPriceRequest.investorPriceRequest/investor:loanType</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.pricingRequest/types:loanTerm</from>
+                <to>$investorPriceRequest.investorPriceRequest/investor:term</to>
+            </copy>
+        </assign>
+
+        <invoke name="GetInvestorPricing"
+                partnerLink="InvestorPricingService"
+                operation="getCurrentPricing"
+                inputVariable="investorPriceRequest"
+                outputVariable="investorPriceResponse"/>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: Calculate LLPA and Final Rate                  -->
+        <!-- Uses AmortizationCalculator from SCA-INF/lib                   -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="CalculatePricing" language="java">
+            <![CDATA[
+                com.lendwise.adapters.AmortizationCalculator calculator = new com.lendwise.adapters.AmortizationCalculator();
+
+                // Get base rate from investor response
+                double baseRate = Double.parseDouble(
+                    (String)getVariableData("investorPriceResponse", "investorPriceResult", "/investor:baseRate"));
+
+                // Get loan parameters
+                double loanAmount = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "pricingRequest", "/types:loanAmount"));
+                int loanTerm = Integer.parseInt(
+                    (String)getVariableData("inputVariable", "pricingRequest", "/types:loanTerm"));
+                double ltv = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "pricingRequest", "/types:ltv"));
+                int creditScore = Integer.parseInt(
+                    (String)getVariableData("inputVariable", "pricingRequest", "/types:creditScore"));
+                String propertyType = (String)getVariableData("inputVariable", "pricingRequest", "/types:propertyType");
+                String occupancy = (String)getVariableData("inputVariable", "pricingRequest", "/types:occupancy");
+                String loanPurpose = (String)getVariableData("inputVariable", "pricingRequest", "/types:loanPurpose");
+
+                // Calculate LLPA (Loan Level Price Adjustment)
+                double llpaAdjustment = 0.0;
+
+                // Credit Score LLPA
+                if (creditScore < 620) {
+                    llpaAdjustment += 3.00;
+                } else if (creditScore < 640) {
+                    llpaAdjustment += 2.75;
+                } else if (creditScore < 660) {
+                    llpaAdjustment += 2.25;
+                } else if (creditScore < 680) {
+                    llpaAdjustment += 1.50;
+                } else if (creditScore < 700) {
+                    llpaAdjustment += 1.00;
+                } else if (creditScore < 720) {
+                    llpaAdjustment += 0.50;
+                } else if (creditScore < 740) {
+                    llpaAdjustment += 0.25;
+                }
+
+                // LTV LLPA
+                if (ltv > 95) {
+                    llpaAdjustment += 0.75;
+                } else if (ltv > 90) {
+                    llpaAdjustment += 0.50;
+                } else if (ltv > 85) {
+                    llpaAdjustment += 0.375;
+                } else if (ltv > 80) {
+                    llpaAdjustment += 0.25;
+                }
+
+                // Property Type LLPA
+                if ("CONDO".equals(propertyType)) {
+                    llpaAdjustment += 0.75;
+                } else if ("MANUFACTURED".equals(propertyType)) {
+                    llpaAdjustment += 1.50;
+                } else if ("MULTI_UNIT".equals(propertyType)) {
+                    llpaAdjustment += 1.00;
+                }
+
+                // Occupancy LLPA
+                if ("SECOND_HOME".equals(occupancy)) {
+                    llpaAdjustment += 0.50;
+                } else if ("INVESTMENT".equals(occupancy)) {
+                    llpaAdjustment += 1.125;
+                }
+
+                // Cash-out refinance LLPA
+                if ("CASH_OUT_REFI".equals(loanPurpose)) {
+                    llpaAdjustment += 0.375;
+                }
+
+                // Calculate final rate (LLPA is in price points, convert to rate - roughly 0.25% per point)
+                double rateAdjustment = llpaAdjustment * 0.25 / 100;
+                double finalRate = baseRate + rateAdjustment;
+
+                // Calculate monthly payment
+                double monthlyPayment = calculator.calculateMonthlyPayment(loanAmount, finalRate, loanTerm);
+
+                // Generate amortization schedule (first 12 months)
+                java.util.List<com.lendwise.adapters.AmortizationCalculator.AmortizationEntry> schedule =
+                    calculator.generateSchedule(loanAmount, finalRate, loanTerm);
+
+                // Build schedule XML
+                StringBuilder scheduleXml = new StringBuilder();
+                int count = 0;
+                for (com.lendwise.adapters.AmortizationCalculator.AmortizationEntry entry : schedule) {
+                    if (count++ >= 12) break; // Only first 12 months
+                    scheduleXml.append(String.format(
+                        "<entry><period>%d</period><payment>%.2f</payment><principal>%.2f</principal><interest>%.2f</interest><balance>%.2f</balance></entry>",
+                        entry.getPeriod(), entry.getPayment(), entry.getPrincipal(), entry.getInterest(), entry.getBalance()));
+                }
+
+                // Set output variables
+                setVariableData("baseRate", String.format("%.4f", baseRate));
+                setVariableData("llpaAdjustment", String.format("%.4f", llpaAdjustment));
+                setVariableData("finalRate", String.format("%.4f", finalRate));
+                setVariableData("monthlyPayment", String.format("%.2f", monthlyPayment));
+
+                addAuditTrailEntry("Pricing Calculation Complete - Base Rate: " + String.format("%.4f", baseRate) +
+                    ", LLPA: " + String.format("%.4f", llpaAdjustment) +
+                    ", Final Rate: " + String.format("%.4f", finalRate) +
+                    ", Monthly Payment: $" + String.format("%.2f", monthlyPayment));
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- Persist rate lock to database                                  -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareDBInsert">
+            <copy>
+                <from variable="lockId"/>
+                <to>$dbInsertRequest.RateLockCollection/db:RateLock/db:lockId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.pricingRequest/types:loanId</from>
+                <to>$dbInsertRequest.RateLockCollection/db:RateLock/db:loanId</to>
+            </copy>
+            <copy>
+                <from variable="baseRate"/>
+                <to>$dbInsertRequest.RateLockCollection/db:RateLock/db:baseRate</to>
+            </copy>
+            <copy>
+                <from variable="llpaAdjustment"/>
+                <to>$dbInsertRequest.RateLockCollection/db:RateLock/db:llpaAdjustment</to>
+            </copy>
+            <copy>
+                <from variable="finalRate"/>
+                <to>$dbInsertRequest.RateLockCollection/db:RateLock/db:lockedRate</to>
+            </copy>
+            <copy>
+                <from>'LOCKED'</from>
+                <to>$dbInsertRequest.RateLockCollection/db:RateLock/db:status</to>
+            </copy>
+        </assign>
+
+        <invoke name="PersistRateLock"
+                partnerLink="PricingDB"
+                operation="insertRateLock"
+                inputVariable="dbInsertRequest"/>
+
+        <!-- Send to Gold Field via Pass-through -->
+        <invoke name="NotifyGoldField"
+                partnerLink="PassthroughPricingService"
+                operation="createPricing"
+                inputVariable="inputVariable"/>
+
+        <!-- Prepare Response -->
+        <assign name="PrepareResponse">
+            <copy>
+                <from variable="lockId"/>
+                <to>$outputVariable.pricingResult/types:lockId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.pricingRequest/types:loanId</from>
+                <to>$outputVariable.pricingResult/types:loanId</to>
+            </copy>
+            <copy>
+                <from variable="baseRate"/>
+                <to>$outputVariable.pricingResult/types:baseRate</to>
+            </copy>
+            <copy>
+                <from variable="llpaAdjustment"/>
+                <to>$outputVariable.pricingResult/types:llpaAdjustment</to>
+            </copy>
+            <copy>
+                <from variable="finalRate"/>
+                <to>$outputVariable.pricingResult/types:finalRate</to>
+            </copy>
+            <copy>
+                <from variable="monthlyPayment"/>
+                <to>$outputVariable.pricingResult/types:monthlyPayment</to>
+            </copy>
+            <copy>
+                <from>'LOCKED'</from>
+                <to>$outputVariable.pricingResult/types:lockStatus</to>
+            </copy>
+        </assign>
+
+        <!-- Reply -->
+        <reply name="ReplyToClient"
+               partnerLink="PricingClient"
+               operation="calculatePricing"
+               variable="outputVariable"/>
+
+    </sequence>
+
+</process>

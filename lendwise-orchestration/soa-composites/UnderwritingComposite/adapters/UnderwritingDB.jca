@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="UnderwritingDB"
+                adapter="db"
+                wsdlLocation="UnderwritingDB.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- Database Adapter - Underwriting Decisions                          -->
+    <!-- Provides CRUD operations for underwriting_decisions table          -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/DB/LendWiseDS"
+                        UIConnectionName="LendWiseDS"
+                        adapterRef=""/>
+
+    <!-- Insert Underwriting Decision -->
+    <endpoint-interaction portType="UnderwritingDB_ptt" operation="insertDecision">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="UnderwritingDB.UnderwritingDecision"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="UnderwritingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Update Underwriting Decision -->
+    <endpoint-interaction portType="UnderwritingDB_ptt" operation="updateDecision">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="UnderwritingDB.UnderwritingDecision"/>
+            <property name="DmlType" value="UPDATE"/>
+            <property name="MappingsMetaDataURL" value="UnderwritingDB-or-mappings.xml"/>
+            <property name="DetectOmissions" value="true"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Select Decision by Loan ID -->
+    <endpoint-interaction portType="UnderwritingDB_ptt" operation="selectDecisionByLoanId">
+        <interaction-spec className="oracle.tip.adapter.db.DBReadInteractionSpec">
+            <property name="DescriptorName" value="UnderwritingDB.UnderwritingDecision"/>
+            <property name="QueryObjectName" value="selectDecisionByLoanId"/>
+            <property name="MappingsMetaDataURL" value="UnderwritingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+            <property name="MaxTransactionSize" value="100"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Insert Credit Report -->
+    <endpoint-interaction portType="UnderwritingDB_ptt" operation="insertCreditReport">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="UnderwritingDB.CreditReport"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="UnderwritingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Insert Underwriting Condition -->
+    <endpoint-interaction portType="UnderwritingDB_ptt" operation="insertCondition">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="UnderwritingDB.UnderwritingCondition"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="UnderwritingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Stored Procedure: Calculate Risk Score -->
+    <endpoint-interaction portType="UnderwritingDB_ptt" operation="calculateRiskScore">
+        <interaction-spec className="oracle.tip.adapter.db.DBStoredProcedureInteractionSpec">
+            <property name="SchemaName" value="LENDWISE"/>
+            <property name="PackageName" value="UW_DECISION_PKG"/>
+            <property name="ProcedureName" value="CALCULATE_RISK_SCORE"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+</adapter-config>

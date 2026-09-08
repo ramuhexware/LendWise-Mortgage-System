@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://lendwise.com/soa/borrower/types"
+            xmlns:tns="http://lendwise.com/soa/borrower/types"
+            elementFormDefault="qualified">
+
+    <!-- ================================================================== -->
+    <!-- Borrower Application Types                                         -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="BorrowerApplicationType">
+        <xsd:sequence>
+            <xsd:element name="borrower" type="tns:BorrowerType"/>
+            <xsd:element name="coBorrower" type="tns:BorrowerType" minOccurs="0"/>
+            <xsd:element name="loanRequest" type="tns:LoanRequestType"/>
+            <xsd:element name="property" type="tns:PropertyType"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="BorrowerType">
+        <xsd:sequence>
+            <xsd:element name="ssn" type="tns:SSNType"/>
+            <xsd:element name="firstName" type="xsd:string"/>
+            <xsd:element name="lastName" type="xsd:string"/>
+            <xsd:element name="middleName" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="dateOfBirth" type="xsd:date"/>
+            <xsd:element name="email" type="xsd:string"/>
+            <xsd:element name="phone" type="xsd:string"/>
+            <xsd:element name="citizenshipStatus" type="tns:CitizenshipStatusType"/>
+            <xsd:element name="maritalStatus" type="tns:MaritalStatusType"/>
+            <xsd:element name="currentAddress" type="tns:AddressType"/>
+            <xsd:element name="previousAddresses" type="tns:AddressListType" minOccurs="0"/>
+            <xsd:element name="employment" type="tns:EmploymentType"/>
+            <xsd:element name="previousEmployment" type="tns:EmploymentListType" minOccurs="0"/>
+            <xsd:element name="assets" type="tns:AssetListType"/>
+            <xsd:element name="liabilities" type="tns:LiabilityListType"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="SSNType">
+        <xsd:restriction base="xsd:string">
+            <xsd:pattern value="\d{3}-\d{2}-\d{4}"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="CitizenshipStatusType">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="US_CITIZEN"/>
+            <xsd:enumeration value="PERMANENT_RESIDENT"/>
+            <xsd:enumeration value="NON_PERMANENT_RESIDENT"/>
+            <xsd:enumeration value="OTHER"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="MaritalStatusType">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="SINGLE"/>
+            <xsd:enumeration value="MARRIED"/>
+            <xsd:enumeration value="SEPARATED"/>
+            <xsd:enumeration value="DIVORCED"/>
+            <xsd:enumeration value="WIDOWED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:complexType name="AddressType">
+        <xsd:sequence>
+            <xsd:element name="street" type="xsd:string"/>
+            <xsd:element name="unit" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="city" type="xsd:string"/>
+            <xsd:element name="state" type="tns:StateType"/>
+            <xsd:element name="zipCode" type="tns:ZipCodeType"/>
+            <xsd:element name="yearsAtAddress" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="housingType" type="tns:HousingType" minOccurs="0"/>
+            <xsd:element name="monthlyPayment" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="AddressListType">
+        <xsd:sequence>
+            <xsd:element name="address" type="tns:AddressType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="StateType">
+        <xsd:restriction base="xsd:string">
+            <xsd:length value="2"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="ZipCodeType">
+        <xsd:restriction base="xsd:string">
+            <xsd:pattern value="\d{5}(-\d{4})?"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="HousingType">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="OWN"/>
+            <xsd:enumeration value="RENT"/>
+            <xsd:enumeration value="LIVING_RENT_FREE"/>
+            <xsd:enumeration value="OTHER"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:complexType name="EmploymentType">
+        <xsd:sequence>
+            <xsd:element name="employerName" type="xsd:string"/>
+            <xsd:element name="employerAddress" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="employerPhone" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="jobTitle" type="xsd:string"/>
+            <xsd:element name="employmentType" type="tns:EmploymentTypeEnum"/>
+            <xsd:element name="startDate" type="xsd:date"/>
+            <xsd:element name="endDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="monthlyIncome" type="xsd:decimal"/>
+            <xsd:element name="bonusIncome" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="commissionIncome" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="overtimeIncome" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="EmploymentListType">
+        <xsd:sequence>
+            <xsd:element name="employment" type="tns:EmploymentType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="EmploymentTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="FULL_TIME"/>
+            <xsd:enumeration value="PART_TIME"/>
+            <xsd:enumeration value="SELF_EMPLOYED"/>
+            <xsd:enumeration value="RETIRED"/>
+            <xsd:enumeration value="UNEMPLOYED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:complexType name="AssetType">
+        <xsd:sequence>
+            <xsd:element name="assetType" type="tns:AssetTypeEnum"/>
+            <xsd:element name="institutionName" type="xsd:string"/>
+            <xsd:element name="accountNumber" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="balance" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="AssetListType">
+        <xsd:sequence>
+            <xsd:element name="asset" type="tns:AssetType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="AssetTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="CHECKING"/>
+            <xsd:enumeration value="SAVINGS"/>
+            <xsd:enumeration value="MONEY_MARKET"/>
+            <xsd:enumeration value="CD"/>
+            <xsd:enumeration value="RETIREMENT_401K"/>
+            <xsd:enumeration value="RETIREMENT_IRA"/>
+            <xsd:enumeration value="STOCKS"/>
+            <xsd:enumeration value="BONDS"/>
+            <xsd:enumeration value="REAL_ESTATE"/>
+            <xsd:enumeration value="OTHER"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:complexType name="LiabilityType">
+        <xsd:sequence>
+            <xsd:element name="liabilityType" type="tns:LiabilityTypeEnum"/>
+            <xsd:element name="creditorName" type="xsd:string"/>
+            <xsd:element name="accountNumber" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="balance" type="xsd:decimal"/>
+            <xsd:element name="monthlyPayment" type="xsd:decimal"/>
+            <xsd:element name="monthsRemaining" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="willBePaidOff" type="xsd:boolean" default="false"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="LiabilityListType">
+        <xsd:sequence>
+            <xsd:element name="liability" type="tns:LiabilityType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="LiabilityTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="MORTGAGE"/>
+            <xsd:enumeration value="HELOC"/>
+            <xsd:enumeration value="AUTO_LOAN"/>
+            <xsd:enumeration value="STUDENT_LOAN"/>
+            <xsd:enumeration value="CREDIT_CARD"/>
+            <xsd:enumeration value="INSTALLMENT"/>
+            <xsd:enumeration value="CHILD_SUPPORT"/>
+            <xsd:enumeration value="ALIMONY"/>
+            <xsd:enumeration value="OTHER"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Loan Request Types                                                 -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="LoanRequestType">
+        <xsd:sequence>
+            <xsd:element name="loanPurpose" type="tns:LoanPurposeType"/>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="downPayment" type="xsd:decimal"/>
+            <xsd:element name="loanType" type="tns:LoanTypeEnum"/>
+            <xsd:element name="loanTerm" type="xsd:int"/>
+            <xsd:element name="interestRateType" type="tns:InterestRateTypeEnum"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="LoanPurposeType">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PURCHASE"/>
+            <xsd:enumeration value="REFINANCE"/>
+            <xsd:enumeration value="CASH_OUT"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="LoanTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="CONVENTIONAL"/>
+            <xsd:enumeration value="FHA"/>
+            <xsd:enumeration value="VA"/>
+            <xsd:enumeration value="USDA"/>
+            <xsd:enumeration value="JUMBO"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="InterestRateTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="FIXED"/>
+            <xsd:enumeration value="ARM"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Property Types                                                     -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="PropertyType">
+        <xsd:sequence>
+            <xsd:element name="address" type="tns:AddressType"/>
+            <xsd:element name="propertyType" type="tns:PropertyTypeEnum"/>
+            <xsd:element name="occupancyType" type="tns:OccupancyTypeEnum"/>
+            <xsd:element name="estimatedValue" type="xsd:decimal"/>
+            <xsd:element name="yearBuilt" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="numberOfUnits" type="xsd:int" default="1"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:simpleType name="PropertyTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="SINGLE_FAMILY"/>
+            <xsd:enumeration value="CONDO"/>
+            <xsd:enumeration value="TOWNHOUSE"/>
+            <xsd:enumeration value="MULTI_FAMILY"/>
+            <xsd:enumeration value="MANUFACTURED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="OccupancyTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PRIMARY"/>
+            <xsd:enumeration value="SECONDARY"/>
+            <xsd:enumeration value="INVESTMENT"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Result Types                                                       -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ApplicationResultType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="loanNumber" type="xsd:string"/>
+            <xsd:element name="status" type="xsd:string"/>
+            <xsd:element name="message" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="submittedDate" type="xsd:dateTime"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PreQualificationDataType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="monthlyIncome" type="xsd:decimal"/>
+            <xsd:element name="monthlyDebt" type="xsd:decimal"/>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="propertyValue" type="xsd:decimal"/>
+            <xsd:element name="downPayment" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PreQualificationResultType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="qualified" type="xsd:boolean"/>
+            <xsd:element name="maxLoanAmount" type="xsd:decimal"/>
+            <xsd:element name="dtiRatio" type="xsd:decimal"/>
+            <xsd:element name="ltvRatio" type="xsd:decimal"/>
+            <xsd:element name="pitiRatio" type="xsd:decimal"/>
+            <xsd:element name="message" type="xsd:string"/>
+            <xsd:element name="recommendedProducts" type="tns:ProductListType" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ProductListType">
+        <xsd:sequence>
+            <xsd:element name="product" type="xsd:string" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Ratio Types (for Java Adapter)                                     -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="RatioInputType">
+        <xsd:sequence>
+            <xsd:element name="monthlyIncome" type="xsd:decimal"/>
+            <xsd:element name="monthlyDebt" type="xsd:decimal"/>
+            <xsd:element name="proposedPITI" type="xsd:decimal"/>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="propertyValue" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="RatioOutputType">
+        <xsd:sequence>
+            <xsd:element name="dti" type="xsd:decimal"/>
+            <xsd:element name="frontEndDti" type="xsd:decimal"/>
+            <xsd:element name="backEndDti" type="xsd:decimal"/>
+            <xsd:element name="ltv" type="xsd:decimal"/>
+            <xsd:element name="piti" type="xsd:decimal"/>
+            <xsd:element name="isQMCompliant" type="xsd:boolean"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Loan Estimate Types                                                -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="LoanEstimateType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="loanNumber" type="xsd:string"/>
+            <xsd:element name="version" type="xsd:int"/>
+            <xsd:element name="issueDate" type="xsd:date"/>
+            <xsd:element name="expirationDate" type="xsd:date"/>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="interestRate" type="xsd:decimal"/>
+            <xsd:element name="monthlyPI" type="xsd:decimal"/>
+            <xsd:element name="estimatedTotalMonthlyPayment" type="xsd:decimal"/>
+            <xsd:element name="estimatedClosingCosts" type="xsd:decimal"/>
+            <xsd:element name="estimatedCashToClose" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Fault Type                                                         -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="FaultType">
+        <xsd:sequence>
+            <xsd:element name="errorCode" type="xsd:string"/>
+            <xsd:element name="errorMessage" type="xsd:string"/>
+            <xsd:element name="timestamp" type="xsd:dateTime"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

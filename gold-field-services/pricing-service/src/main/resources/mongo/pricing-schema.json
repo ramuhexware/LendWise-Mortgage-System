@@ -1,0 +1,89 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "productId"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "productId": { "bsonType": "string" },
+      "productName": { "bsonType": "string" },
+      "productType": {
+        "bsonType": "string",
+        "enum": ["CONVENTIONAL", "FHA", "VA", "USDA", "JUMBO", "NON_QM"]
+      },
+      "termMonths": { "bsonType": "int" },
+      "rateType": {
+        "bsonType": "string",
+        "enum": ["FIXED", "ARM_3_1", "ARM_5_1", "ARM_7_1", "ARM_10_1"]
+      },
+      "quoteDate": { "bsonType": "date" },
+      "expirationDate": { "bsonType": "date" },
+      "pricing": {
+        "bsonType": "object",
+        "properties": {
+          "baseRate": { "bsonType": "double" },
+          "adjustedRate": { "bsonType": "double" },
+          "totalLlpa": { "bsonType": "double" },
+          "price": { "bsonType": "double" },
+          "discountPoints": { "bsonType": "double" },
+          "lenderCredits": { "bsonType": "decimal" },
+          "apr": { "bsonType": "double" }
+        }
+      },
+      "llpaBreakdown": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "adjustmentName": { "bsonType": "string" },
+            "adjustmentType": {
+              "bsonType": "string",
+              "enum": ["LTV", "FICO", "PROPERTY_TYPE", "OCCUPANCY", "LOAN_PURPOSE", "STATE", "SUBORDINATE_FINANCING", "OTHER"]
+            },
+            "criteriaMet": { "bsonType": "string" },
+            "adjustmentRate": { "bsonType": "double" },
+            "adjustmentPrice": { "bsonType": "double" }
+          }
+        }
+      },
+      "inputFactors": {
+        "bsonType": "object",
+        "properties": {
+          "loanAmount": { "bsonType": "decimal" },
+          "propertyValue": { "bsonType": "decimal" },
+          "ltv": { "bsonType": "double" },
+          "cltv": { "bsonType": "double" },
+          "ficoScore": { "bsonType": "int" },
+          "dti": { "bsonType": "double" },
+          "propertyType": { "bsonType": "string" },
+          "occupancyType": { "bsonType": "string" },
+          "loanPurpose": { "bsonType": "string" },
+          "propertyState": { "bsonType": "string" },
+          "units": { "bsonType": "int" },
+          "subordinateFinancing": { "bsonType": "bool" }
+        }
+      },
+      "monthlyPayment": {
+        "bsonType": "object",
+        "properties": {
+          "principalAndInterest": { "bsonType": "decimal" },
+          "taxes": { "bsonType": "decimal" },
+          "insurance": { "bsonType": "decimal" },
+          "pmi": { "bsonType": "decimal" },
+          "hoa": { "bsonType": "decimal" },
+          "total": { "bsonType": "decimal" }
+        }
+      },
+      "lockPeriodDays": { "bsonType": "int" },
+      "status": {
+        "bsonType": "string",
+        "enum": ["ACTIVE", "SELECTED", "EXPIRED", "LOCKED", "SUPERSEDED"]
+      },
+      "selected": { "bsonType": "bool" },
+      "selectedDate": { "bsonType": "date" },
+      "selectedBy": { "bsonType": "string" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

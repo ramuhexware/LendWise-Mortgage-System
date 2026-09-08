@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="DocumentProcessingProcess"
+         targetNamespace="http://lendwise.com/soa/document/bpel"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:bpws="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:tns="http://lendwise.com/soa/document/bpel"
+         xmlns:document="http://lendwise.com/soa/document"
+         xmlns:types="http://lendwise.com/soa/document/types"
+         xmlns:file="http://lendwise.com/soa/adapter/file">
+
+    <!-- ================================================================== -->
+    <!-- Partner Links                                                      -->
+    <!-- ================================================================== -->
+
+    <partnerLinks>
+        <partnerLink name="DocumentProcessingClient"
+                     partnerLinkType="document:DocumentProcessingPLT"
+                     myRole="DocumentProcessingProvider"/>
+
+        <partnerLink name="FileAdapterInbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     myRole="FileReader"/>
+
+        <partnerLink name="FileAdapterOutbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     partnerRole="FileWriter"/>
+
+        <partnerLink name="PassthroughDocumentService"
+                     partnerLinkType="document:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+    </partnerLinks>
+
+    <!-- ================================================================== -->
+    <!-- Variables                                                          -->
+    <!-- ================================================================== -->
+
+    <variables>
+        <variable name="inputVariable" messageType="document:ProcessDocumentRequest"/>
+        <variable name="outputVariable" messageType="document:ProcessDocumentResponse"/>
+        <variable name="fileContent" type="xsd:base64Binary"/>
+        <variable name="documentPath" type="xsd:string"/>
+        <variable name="documentType" type="xsd:string"/>
+        <variable name="ocrOutput" element="types:OCROutputType"/>
+        <variable name="classificationResult" element="types:ClassificationResultType"/>
+        <variable name="documentId" type="xsd:string"/>
+    </variables>
+
+    <!-- ================================================================== -->
+    <!-- Main Sequence                                                      -->
+    <!-- ================================================================== -->
+
+    <sequence name="MainSequence">
+
+        <!-- Receive document (from API or File Adapter) -->
+        <receive name="ReceiveDocument"
+                 partnerLink="DocumentProcessingClient"
+                 operation="processDocument"
+                 variable="inputVariable"
+                 createInstance="yes"/>
+
+        <!-- Generate Document ID -->
+        <assign name="GenerateDocumentId">
+            <copy>
+                <from>ora:generateGUID()</from>
+                <to variable="documentId"/>
+            </copy>
+            <copy>
+                <from>$inputVariable.documentRequest/types:filePath</from>
+                <to variable="documentPath"/>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: OCR Processing                                 -->
+        <!-- Uses OCRProcessor from SCA-INF/lib/ocr-processor.jar           -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="ProcessOCR" language="java">
+            <![CDATA[
+                com.lendwise.adapters.OCRProcessor ocr = new com.lendwise.adapters.OCRProcessor();
+
+                String documentPath = (String)getVariableData("documentPath");
+                String documentType = (String)getVariableData("inputVariable", "documentRequest", "/types:DocumentRequestType/types:documentType");
+
+                // Process document through OCR
+                java.util.Map<String, String> extractedData = ocr.processDocument(documentPath, documentType);
+
+                // Set extracted data to BPEL variables
+                setVariableData("ocrOutput", "/types:OCROutputType/types:extractedText", extractedData.get("extractedText"));
+                setVariableData("ocrOutput", "/types:OCROutputType/types:confidence",
+                    Double.toString(ocr.calculateConfidence(extractedData)));
+
+                // Extract specific fields based on document type
+                if ("PAYSTUB".equals(documentType)) {
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:employerName",
+                        extractedData.get("employerName"));
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:grossPay",
+                        extractedData.get("grossPay"));
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:payDate",
+                        extractedData.get("payDate"));
+                } else if ("W2".equals(documentType)) {
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:taxYear",
+                        extractedData.get("taxYear"));
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:wages",
+                        extractedData.get("box1_wages"));
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:employerEIN",
+                        extractedData.get("employerEIN"));
+                } else if ("BANK_STATEMENT".equals(documentType)) {
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:bankName",
+                        extractedData.get("bankName"));
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:endingBalance",
+                        extractedData.get("endingBalance"));
+                    setVariableData("ocrOutput", "/types:OCROutputType/types:fields/types:accountNumber",
+                        extractedData.get("accountNumber"));
+                }
+
+                addAuditTrailEntry("OCR Processing Complete - Document Type: " + documentType +
+                    ", Confidence: " + ocr.calculateConfidence(extractedData));
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- AI Classification (simplified - in production use ML service)  -->
+        <!-- ============================================================== -->
+
+        <assign name="ClassifyDocument">
+            <copy>
+                <from>$inputVariable.documentRequest/types:documentType</from>
+                <to>$classificationResult/types:classifiedType</to>
+            </copy>
+            <copy>
+                <from>$ocrOutput/types:confidence</from>
+                <to>$classificationResult/types:confidence</to>
+            </copy>
+            <copy>
+                <from>'OCR'</from>
+                <to>$classificationResult/types:method</to>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Invoke Pass-through to save document in Gold Field             -->
+        <!-- ============================================================== -->
+
+        <invoke name="SaveToGoldField"
+                partnerLink="PassthroughDocumentService"
+                operation="createDocument"
+                inputVariable="inputVariable"/>
+
+        <!-- ============================================================== -->
+        <!-- Write processed document using File Adapter                    -->
+        <!-- ============================================================== -->
+
+        <invoke name="WriteProcessedDocument"
+                partnerLink="FileAdapterOutbound"
+                operation="Write"
+                inputVariable="inputVariable"/>
+
+        <!-- Prepare Response -->
+        <assign name="PrepareResponse">
+            <copy>
+                <from variable="documentId"/>
+                <to>$outputVariable.documentResult/types:documentId</to>
+            </copy>
+            <copy>
+                <from>'PROCESSED'</from>
+                <to>$outputVariable.documentResult/types:status</to>
+            </copy>
+            <copy>
+                <from>$classificationResult/types:classifiedType</from>
+                <to>$outputVariable.documentResult/types:classifiedType</to>
+            </copy>
+            <copy>
+                <from>$classificationResult/types:confidence</from>
+                <to>$outputVariable.documentResult/types:confidence</to>
+            </copy>
+            <copy>
+                <from>$ocrOutput</from>
+                <to>$outputVariable.documentResult/types:ocrData</to>
+            </copy>
+        </assign>
+
+        <!-- Reply -->
+        <reply name="ReplyToClient"
+               partnerLink="DocumentProcessingClient"
+               operation="processDocument"
+               variable="outputVariable"/>
+
+    </sequence>
+
+</process>

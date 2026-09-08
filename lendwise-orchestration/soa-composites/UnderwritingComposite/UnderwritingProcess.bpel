@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="UnderwritingProcess"
+         targetNamespace="http://lendwise.com/soa/underwriting/bpel"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:bpws="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:tns="http://lendwise.com/soa/underwriting/bpel"
+         xmlns:uw="http://lendwise.com/soa/underwriting"
+         xmlns:types="http://lendwise.com/soa/underwriting/types"
+         xmlns:credit="http://creditbureau.example.com/wsdl"
+         xmlns:aus="http://lendwise.com/soa/aus"
+         xmlns:db="http://lendwise.com/soa/adapter/db">
+
+    <!-- ================================================================== -->
+    <!-- Partner Links                                                      -->
+    <!-- ================================================================== -->
+
+    <partnerLinks>
+        <partnerLink name="UnderwritingClient"
+                     partnerLinkType="uw:UnderwritingPLT"
+                     myRole="UnderwritingProvider"/>
+
+        <partnerLink name="CreditBureauService"
+                     partnerLinkType="credit:CreditBureauPLT"
+                     partnerRole="CreditInquiryProvider"/>
+
+        <partnerLink name="AUSService"
+                     partnerLinkType="aus:AUSPLT"
+                     partnerRole="AUSProvider"/>
+
+        <partnerLink name="DatabaseAdapter"
+                     partnerLinkType="db:UnderwritingDBPLT"
+                     partnerRole="DatabaseProvider"/>
+
+        <partnerLink name="PassthroughUnderwritingService"
+                     partnerLinkType="uw:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+    </partnerLinks>
+
+    <!-- ================================================================== -->
+    <!-- Variables                                                          -->
+    <!-- ================================================================== -->
+
+    <variables>
+        <variable name="inputVariable" messageType="uw:UnderwritingRequest"/>
+        <variable name="outputVariable" messageType="uw:UnderwritingResponse"/>
+        <variable name="creditRequest" messageType="credit:CreditInquiryRequest"/>
+        <variable name="creditResponse" messageType="credit:CreditInquiryResponse"/>
+        <variable name="ausRequest" messageType="aus:AUSRequest"/>
+        <variable name="ausResponse" messageType="aus:AUSResponse"/>
+        <variable name="dbInsertRequest" messageType="db:UnderwritingDecisionCollection"/>
+        <variable name="decisionId" type="xsd:string"/>
+        <variable name="riskScore" type="xsd:int"/>
+        <variable name="decisionStatus" type="xsd:string"/>
+        <variable name="conditions" element="types:ConditionListType"/>
+    </variables>
+
+    <!-- ================================================================== -->
+    <!-- Fault Handlers                                                     -->
+    <!-- ================================================================== -->
+
+    <faultHandlers>
+        <catch faultName="credit:CreditInquiryFault">
+            <sequence>
+                <assign name="AssignCreditError">
+                    <copy>
+                        <from>'CREDIT_ERROR'</from>
+                        <to variable="decisionStatus"/>
+                    </copy>
+                </assign>
+                <bpelx:exec name="LogCreditError" language="java">
+                    <![CDATA[
+                        addAuditTrailEntry("Credit Bureau inquiry failed - proceeding with manual review");
+                    ]]>
+                </bpelx:exec>
+            </sequence>
+        </catch>
+        <catchAll>
+            <sequence>
+                <assign name="AssignSystemError">
+                    <copy>
+                        <from>'SYSTEM_ERROR'</from>
+                        <to>$outputVariable.underwritingResult/types:status</to>
+                    </copy>
+                </assign>
+            </sequence>
+        </catchAll>
+    </faultHandlers>
+
+    <!-- ================================================================== -->
+    <!-- Main Sequence                                                      -->
+    <!-- ================================================================== -->
+
+    <sequence name="MainSequence">
+
+        <!-- Receive underwriting request -->
+        <receive name="ReceiveUnderwritingRequest"
+                 partnerLink="UnderwritingClient"
+                 operation="submitForUnderwriting"
+                 variable="inputVariable"
+                 createInstance="yes"/>
+
+        <!-- Generate Decision ID -->
+        <assign name="GenerateDecisionId">
+            <copy>
+                <from>ora:generateGUID()</from>
+                <to variable="decisionId"/>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Parallel Credit Bureau Calls (all 3 bureaus)                   -->
+        <!-- ============================================================== -->
+
+        <flow name="ParallelCreditPull">
+            <!-- Equifax -->
+            <sequence name="EquifaxSequence">
+                <assign name="PrepareEquifaxRequest">
+                    <copy>
+                        <from>$inputVariable.underwritingRequest/types:borrowerSSN</from>
+                        <to>$creditRequest.creditInquiry/credit:ssn</to>
+                    </copy>
+                    <copy>
+                        <from>'EQUIFAX'</from>
+                        <to>$creditRequest.creditInquiry/credit:bureau</to>
+                    </copy>
+                </assign>
+                <invoke name="CallEquifax"
+                        partnerLink="CreditBureauService"
+                        operation="pullCredit"
+                        inputVariable="creditRequest"
+                        outputVariable="creditResponse"/>
+            </sequence>
+
+            <!-- Experian -->
+            <sequence name="ExperianSequence">
+                <assign name="PrepareExperianRequest">
+                    <copy>
+                        <from>$inputVariable.underwritingRequest/types:borrowerSSN</from>
+                        <to>$creditRequest.creditInquiry/credit:ssn</to>
+                    </copy>
+                    <copy>
+                        <from>'EXPERIAN'</from>
+                        <to>$creditRequest.creditInquiry/credit:bureau</to>
+                    </copy>
+                </assign>
+                <invoke name="CallExperian"
+                        partnerLink="CreditBureauService"
+                        operation="pullCredit"
+                        inputVariable="creditRequest"
+                        outputVariable="creditResponse"/>
+            </sequence>
+
+            <!-- TransUnion -->
+            <sequence name="TransUnionSequence">
+                <assign name="PrepareTransUnionRequest">
+                    <copy>
+                        <from>$inputVariable.underwritingRequest/types:borrowerSSN</from>
+                        <to>$creditRequest.creditInquiry/credit:ssn</to>
+                    </copy>
+                    <copy>
+                        <from>'TRANSUNION'</from>
+                        <to>$creditRequest.creditInquiry/credit:bureau</to>
+                    </copy>
+                </assign>
+                <invoke name="CallTransUnion"
+                        partnerLink="CreditBureauService"
+                        operation="pullCredit"
+                        inputVariable="creditRequest"
+                        outputVariable="creditResponse"/>
+            </sequence>
+        </flow>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: Decision Engine                                -->
+        <!-- Uses DecisionEngine from SCA-INF/lib/decision-engine.jar       -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="RunDecisionEngine" language="java">
+            <![CDATA[
+                com.lendwise.adapters.DecisionEngine engine = new com.lendwise.adapters.DecisionEngine();
+
+                // Get loan data from input
+                double loanAmount = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "underwritingRequest", "/types:loanAmount"));
+                double purchasePrice = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "underwritingRequest", "/types:purchasePrice"));
+                double monthlyIncome = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "underwritingRequest", "/types:monthlyIncome"));
+                double monthlyDebt = Double.parseDouble(
+                    (String)getVariableData("inputVariable", "underwritingRequest", "/types:monthlyDebt"));
+                int creditScore = Integer.parseInt(
+                    (String)getVariableData("creditResponse", "creditResult", "/credit:ficoScore"));
+
+                // Build loan data map
+                java.util.Map<String, Object> loanData = new java.util.HashMap<>();
+                loanData.put("loanAmount", loanAmount);
+                loanData.put("purchasePrice", purchasePrice);
+                loanData.put("monthlyIncome", monthlyIncome);
+                loanData.put("monthlyDebt", monthlyDebt);
+                loanData.put("creditScore", creditScore);
+
+                // Run decision engine
+                com.lendwise.adapters.DecisionEngine.LoanDecision decision = engine.evaluateLoan(loanData);
+
+                // Set decision results
+                setVariableData("decisionStatus", decision.getDecision());
+                setVariableData("riskScore", Integer.toString(decision.getRiskScore()));
+
+                // Generate conditions if approved with conditions
+                if ("APPROVED_WITH_CONDITIONS".equals(decision.getDecision())) {
+                    java.util.List<String> conditionList = engine.generateConditions(loanData, decision);
+                    StringBuilder conditions = new StringBuilder();
+                    for (String condition : conditionList) {
+                        conditions.append(condition).append("|");
+                    }
+                    setVariableData("conditions", "/types:ConditionListType/types:conditionText", conditions.toString());
+                }
+
+                // Log decision
+                addAuditTrailEntry("Decision Engine Result: " + decision.getDecision() +
+                    ", Risk Score: " + decision.getRiskScore() +
+                    ", LTV: " + decision.getLtv() +
+                    ", DTI: " + decision.getDti());
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- Call AUS (DU/LPA) for agency validation                        -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareAUSRequest">
+            <copy>
+                <from>$inputVariable.underwritingRequest/types:loanId</from>
+                <to>$ausRequest.ausSubmission/aus:loanId</to>
+            </copy>
+            <copy>
+                <from>$creditResponse.creditResult/credit:ficoScore</from>
+                <to>$ausRequest.ausSubmission/aus:creditScore</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.underwritingRequest/types:loanAmount</from>
+                <to>$ausRequest.ausSubmission/aus:loanAmount</to>
+            </copy>
+        </assign>
+
+        <invoke name="SubmitToAUS"
+                partnerLink="AUSService"
+                operation="submitLoan"
+                inputVariable="ausRequest"
+                outputVariable="ausResponse"/>
+
+        <!-- ============================================================== -->
+        <!-- Persist decision to database                                   -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareDBInsert">
+            <copy>
+                <from variable="decisionId"/>
+                <to>$dbInsertRequest.UnderwritingDecisionCollection/db:UnderwritingDecision/db:decisionId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.underwritingRequest/types:loanId</from>
+                <to>$dbInsertRequest.UnderwritingDecisionCollection/db:UnderwritingDecision/db:loanId</to>
+            </copy>
+            <copy>
+                <from variable="decisionStatus"/>
+                <to>$dbInsertRequest.UnderwritingDecisionCollection/db:UnderwritingDecision/db:decision</to>
+            </copy>
+            <copy>
+                <from variable="riskScore"/>
+                <to>$dbInsertRequest.UnderwritingDecisionCollection/db:UnderwritingDecision/db:riskScore</to>
+            </copy>
+            <copy>
+                <from>$ausResponse.ausResult/aus:findingsCode</from>
+                <to>$dbInsertRequest.UnderwritingDecisionCollection/db:UnderwritingDecision/db:ausFindingsCode</to>
+            </copy>
+        </assign>
+
+        <invoke name="PersistDecision"
+                partnerLink="DatabaseAdapter"
+                operation="insertDecision"
+                inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- Send to Gold Field via Pass-through                            -->
+        <!-- ============================================================== -->
+
+        <invoke name="NotifyGoldField"
+                partnerLink="PassthroughUnderwritingService"
+                operation="createUnderwritingDecision"
+                inputVariable="inputVariable"/>
+
+        <!-- Prepare Response -->
+        <assign name="PrepareResponse">
+            <copy>
+                <from variable="decisionId"/>
+                <to>$outputVariable.underwritingResult/types:decisionId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.underwritingRequest/types:loanId</from>
+                <to>$outputVariable.underwritingResult/types:loanId</to>
+            </copy>
+            <copy>
+                <from variable="decisionStatus"/>
+                <to>$outputVariable.underwritingResult/types:status</to>
+            </copy>
+            <copy>
+                <from variable="riskScore"/>
+                <to>$outputVariable.underwritingResult/types:riskScore</to>
+            </copy>
+            <copy>
+                <from>$ausResponse.ausResult/aus:findingsCode</from>
+                <to>$outputVariable.underwritingResult/types:ausFindingsCode</to>
+            </copy>
+            <copy>
+                <from>$ausResponse.ausResult/aus:recommendation</from>
+                <to>$outputVariable.underwritingResult/types:ausRecommendation</to>
+            </copy>
+            <copy>
+                <from variable="conditions"/>
+                <to>$outputVariable.underwritingResult/types:conditions</to>
+            </copy>
+        </assign>
+
+        <!-- Reply to client -->
+        <reply name="ReplyToClient"
+               partnerLink="UnderwritingClient"
+               operation="submitForUnderwriting"
+               variable="outputVariable"/>
+
+    </sequence>
+
+</process>

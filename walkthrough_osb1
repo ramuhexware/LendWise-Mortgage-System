@@ -1,0 +1,54 @@
+# Walkthrough - Integrated OSB & SOA Enterprise Architecture
+
+Oracle Service Bus (OSB 12c) proxy services, message pipelines, and business services have been added to [LendWise-Mortgage-System](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System) alongside the existing Oracle SOA Suite BPEL Composites, forming a complete enterprise OSB + SOA combination layer in `lendwise-orchestration`.
+
+## Changes Made
+
+### 1. OSB Services Module Setup
+Created the full [osb-services](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services) structure in `lendwise-orchestration` with parent build configuration in [osb-services/pom.xml](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/pom.xml).
+
+### 2. Maven Reactor Module Registration
+Modified [lendwise-orchestration/pom.xml](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/pom.xml) to add `<module>osb-services</module>`.
+
+```xml
+    <modules>
+        <module>java-adapters/dti-calculator</module>
+        <module>java-adapters/ocr-processor</module>
+        <module>java-adapters/decision-engine</module>
+        <module>java-adapters/amortization-calculator</module>
+        <module>osb-services</module>
+    </modules>
+```
+
+### 3. OSB Proxy & Business Services for 6 Functional Flows
+- [BorrowerIntakeOSB](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/BorrowerIntakeOSB) -> Binds to `BorrowerIntakeComposite`
+- [DocumentProcessingOSB](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/DocumentProcessingOSB) -> Binds to `DocumentProcessingComposite`
+- [UnderwritingOSB](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/UnderwritingOSB) -> Binds to `UnderwritingComposite`
+- [ComplianceOSB](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/ComplianceOSB) -> Binds to `ComplianceComposite`
+- [PricingEngineOSB](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/PricingEngineOSB) -> Binds to `PricingEngineComposite`
+- [ClosingDisclosureOSB](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/ClosingDisclosureOSB) -> Binds to `ClosingDisclosureComposite`
+
+### 4. Common Utilities & Docker Infrastructure
+- Added common schema [CommonFault.xsd](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/common/schemas/CommonFault.xsd) and pipeline [FaultHandler.pipeline](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/osb-services/common/faults/FaultHandler.pipeline).
+- Added Docker environment files (`Dockerfile` and `docker-compose.yml`) under [lendwise-orchestration/docker](file:///c:/ramu/Project_Assignment/RapidX/FreddeMac_Project_RapidX/Work/LendWise-Mortgage-System/lendwise-orchestration/docker) for WebLogic 12c runtime environment.
+
+---
+
+## Verification Results
+
+### Automated Maven Build
+Executed `mvn clean install` inside `lendwise-orchestration`.
+
+```powershell
+[INFO] Reactor Summary for LendWise Orchestration 1.0.0-SNAPSHOT:
+[INFO] 
+[INFO] LendWise Orchestration ............................. SUCCESS [  0.916 s]
+[INFO] DTI Calculator - Java Adapter ...................... SUCCESS [  5.844 s]
+[INFO] OCR Processor - Java Adapter ....................... SUCCESS [  0.488 s]
+[INFO] Decision Engine - Java Adapter ..................... SUCCESS [  0.312 s]
+[INFO] Amortization Calculator - Java Adapter ............. SUCCESS [  0.483 s]
+[INFO] LendWise OSB Services .............................. SUCCESS [  1.055 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+```

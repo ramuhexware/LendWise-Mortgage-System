@@ -1,0 +1,51 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "loanAmount", "interestRate", "termMonths"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "quoteId": { "bsonType": "string" },
+      "loanAmount": { "bsonType": "decimal" },
+      "interestRate": { "bsonType": "double" },
+      "termMonths": { "bsonType": "int" },
+      "startDate": { "bsonType": "date" },
+      "monthlyPayment": { "bsonType": "decimal" },
+      "totalInterest": { "bsonType": "decimal" },
+      "totalPayments": { "bsonType": "decimal" },
+      "schedule": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "paymentNumber": { "bsonType": "int" },
+            "paymentDate": { "bsonType": "date" },
+            "beginningBalance": { "bsonType": "decimal" },
+            "paymentAmount": { "bsonType": "decimal" },
+            "principalAmount": { "bsonType": "decimal" },
+            "interestAmount": { "bsonType": "decimal" },
+            "endingBalance": { "bsonType": "decimal" },
+            "cumulativeInterest": { "bsonType": "decimal" },
+            "cumulativePrincipal": { "bsonType": "decimal" }
+          }
+        }
+      },
+      "extraPaymentScenarios": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "scenarioName": { "bsonType": "string" },
+            "extraMonthlyPayment": { "bsonType": "decimal" },
+            "newTermMonths": { "bsonType": "int" },
+            "interestSavings": { "bsonType": "decimal" },
+            "timeSavedMonths": { "bsonType": "int" }
+          }
+        }
+      },
+      "generatedAt": { "bsonType": "date" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<composite name="UnderwritingComposite"
+           revision="1.0"
+           label="AUS, Credit Check, Decision Engine"
+           mode="active"
+           state="on"
+           xmlns="http://xmlns.oracle.com/sca/1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
+           xmlns:ui="http://xmlns.oracle.com/soa/designer/">
+
+    <!-- ================================================================== -->
+    <!-- Flow 3: Underwriting                                               -->
+    <!-- - AUS (Automated Underwriting System) interaction                  -->
+    <!-- - Credit bureau SOAP calls                                         -->
+    <!-- - Decision Engine Java embedding                                   -->
+    <!-- - Database Adapter for persist decisions                           -->
+    <!-- ================================================================== -->
+
+    <!-- Import WSDLs -->
+    <import namespace="http://lendwise.com/soa/underwriting"
+            location="UnderwritingProcess.wsdl"
+            importType="wsdl"/>
+
+    <!-- ================================================================== -->
+    <!-- Exposed Services                                                   -->
+    <!-- ================================================================== -->
+
+    <service name="UnderwritingService" ui:wsdlLocation="UnderwritingProcess.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/underwriting#wsdl.interface(UnderwritingPortType)"/>
+        <binding.ws port="http://lendwise.com/soa/underwriting#wsdl.endpoint(UnderwritingService/UnderwritingPort)"/>
+    </service>
+
+    <!-- REST Entry for internal microservices -->
+    <service name="UnderwritingRESTService">
+        <interface.wsdl interface="http://lendwise.com/soa/underwriting#wsdl.interface(UnderwritingPortType)"/>
+        <binding.rest location="/underwriting/api"
+                      method="POST"
+                      contentType="application/json"/>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- BPEL Component                                                     -->
+    <!-- ================================================================== -->
+
+    <component name="UnderwritingProcess" version="2.0">
+        <implementation.bpel src="UnderwritingProcess.bpel"/>
+        <componentType>
+            <service name="UnderwritingService">
+                <interface.wsdl interface="http://lendwise.com/soa/underwriting#wsdl.interface(UnderwritingPortType)"/>
+            </service>
+
+            <reference name="CreditBureauService">
+                <interface.wsdl interface="http://creditbureau.example.com/wsdl#wsdl.interface(CreditInquiryPortType)"/>
+            </reference>
+            <reference name="AUSService">
+                <interface.wsdl interface="http://lendwise.com/soa/aus#wsdl.interface(AUSPortType)"/>
+            </reference>
+            <reference name="DatabaseAdapter">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(UnderwritingDB_ptt)"/>
+            </reference>
+            <reference name="PassthroughUnderwritingService">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+        </componentType>
+    </component>
+
+    <!-- ================================================================== -->
+    <!-- External References                                                -->
+    <!-- ================================================================== -->
+
+    <!-- Credit Bureau SOAP Service (Equifax/Experian/TransUnion) -->
+    <reference name="CreditBureauService">
+        <interface.wsdl interface="http://creditbureau.example.com/wsdl#wsdl.interface(CreditInquiryPortType)"/>
+        <binding.ws port="http://creditbureau.example.com/wsdl#wsdl.endpoint(CreditBureauService/CreditInquiryPort)"
+                    location="${CREDIT_BUREAU_ENDPOINT}">
+            <property name="oracle.webservices.auth.username" source="${CREDIT_BUREAU_USERNAME}"/>
+            <property name="oracle.webservices.auth.password" source="${CREDIT_BUREAU_PASSWORD}"/>
+            <wsp:PolicyReference URI="oracle/wss_username_token_client_policy"/>
+        </binding.ws>
+    </reference>
+
+    <!-- AUS (Fannie Mae Desktop Underwriter or Freddie Mac LPA) -->
+    <reference name="AUSService">
+        <interface.wsdl interface="http://lendwise.com/soa/aus#wsdl.interface(AUSPortType)"/>
+        <binding.ws port="http://lendwise.com/soa/aus#wsdl.endpoint(AUSService/AUSPort)"
+                    location="${AUS_ENDPOINT}"/>
+    </reference>
+
+    <!-- Database Adapter - Underwriting decisions -->
+    <reference name="DatabaseAdapter" ui:wsdlLocation="adapters/UnderwritingDB.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(UnderwritingDB_ptt)"/>
+        <binding.jca config="adapters/UnderwritingDB.jca"/>
+    </reference>
+
+    <!-- Pass-through to Gold Field underwriting-service -->
+    <reference name="PassthroughUnderwritingService">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/underwriting"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- ================================================================== -->
+    <!-- Wiring                                                             -->
+    <!-- ================================================================== -->
+
+    <wire>
+        <source.uri>UnderwritingService</source.uri>
+        <target.uri>UnderwritingProcess/UnderwritingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingRESTService</source.uri>
+        <target.uri>UnderwritingProcess/UnderwritingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingProcess/CreditBureauService</source.uri>
+        <target.uri>CreditBureauService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingProcess/AUSService</source.uri>
+        <target.uri>AUSService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingProcess/DatabaseAdapter</source.uri>
+        <target.uri>DatabaseAdapter</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingProcess/PassthroughUnderwritingService</source.uri>
+        <target.uri>PassthroughUnderwritingService</target.uri>
+    </wire>
+
+</composite>

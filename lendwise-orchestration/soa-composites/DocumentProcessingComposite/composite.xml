@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<composite name="DocumentProcessingComposite"
+           revision="1.0"
+           label="Document Upload, AI Classification and Verification"
+           mode="active"
+           state="on"
+           xmlns="http://xmlns.oracle.com/sca/1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
+           xmlns:ui="http://xmlns.oracle.com/soa/designer/">
+
+    <!-- ================================================================== -->
+    <!-- Flow 2: Smart Document Upload, AI Classification & Verification    -->
+    <!-- - OCR document processing (Paystubs, W-2s, 1040s, Bank Statements) -->
+    <!-- - Cross-data validation                                            -->
+    <!-- - Missing item checklist state machine                             -->
+    <!-- - File/FTP Adapter usage                                           -->
+    <!-- ================================================================== -->
+
+    <!-- Import WSDLs -->
+    <import namespace="http://lendwise.com/soa/document"
+            location="DocumentProcessing.wsdl"
+            importType="wsdl"/>
+    <import namespace="http://lendwise.com/soa/adapter/file"
+            location="adapters/FileAdapter_Inbound.wsdl"
+            importType="wsdl"/>
+
+    <!-- ================================================================== -->
+    <!-- Exposed Services (Entry Points)                                    -->
+    <!-- ================================================================== -->
+
+    <!-- SOAP Service Entry Point -->
+    <service name="DocumentProcessingService" ui:wsdlLocation="DocumentProcessing.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/document#wsdl.interface(DocumentProcessingPortType)"/>
+        <binding.ws port="http://lendwise.com/soa/document#wsdl.endpoint(DocumentProcessingService/DocumentProcessingPort)"/>
+    </service>
+
+    <!-- File Adapter - Inbound (polls for new documents) -->
+    <service name="FileAdapterInbound" ui:wsdlLocation="adapters/FileAdapter_Inbound.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(Read_ptt)"/>
+        <binding.jca config="adapters/FileAdapter_Inbound.jca"/>
+    </service>
+
+    <!-- FTP Adapter - Inbound (receives from external sources) -->
+    <service name="FTPAdapterInbound" ui:wsdlLocation="adapters/FTPAdapter_Inbound.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/ftp#wsdl.interface(Get_ptt)"/>
+        <binding.jca config="adapters/FTPAdapter_Inbound.jca"/>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- BPEL Component                                                     -->
+    <!-- ================================================================== -->
+
+    <component name="DocumentProcessingProcess" version="2.0">
+        <implementation.bpel src="DocumentProcessingProcess.bpel"/>
+        <componentType>
+            <!-- Service Interfaces -->
+            <service name="DocumentProcessingService">
+                <interface.wsdl interface="http://lendwise.com/soa/document#wsdl.interface(DocumentProcessingPortType)"/>
+            </service>
+            <service name="FileAdapterInbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(Read_ptt)"/>
+            </service>
+            <service name="FTPAdapterInbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/ftp#wsdl.interface(Get_ptt)"/>
+            </service>
+
+            <!-- References -->
+            <reference name="FileAdapterOutbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(Write_ptt)"/>
+            </reference>
+            <reference name="PassthroughDocumentService">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+        </componentType>
+    </component>
+
+    <!-- ================================================================== -->
+    <!-- External References                                                -->
+    <!-- ================================================================== -->
+
+    <!-- File Adapter - Outbound (writes processed documents) -->
+    <reference name="FileAdapterOutbound" ui:wsdlLocation="adapters/FileAdapter_Outbound.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(Write_ptt)"/>
+        <binding.jca config="adapters/FileAdapter_Outbound.jca"/>
+    </reference>
+
+    <!-- Pass-through Service (REST) - Routes to Gold Field document-service -->
+    <reference name="PassthroughDocumentService">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/documents"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- ================================================================== -->
+    <!-- Wiring                                                             -->
+    <!-- ================================================================== -->
+
+    <wire>
+        <source.uri>DocumentProcessingService</source.uri>
+        <target.uri>DocumentProcessingProcess/DocumentProcessingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>FileAdapterInbound</source.uri>
+        <target.uri>DocumentProcessingProcess/FileAdapterInbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>FTPAdapterInbound</source.uri>
+        <target.uri>DocumentProcessingProcess/FTPAdapterInbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>DocumentProcessingProcess/FileAdapterOutbound</source.uri>
+        <target.uri>FileAdapterOutbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>DocumentProcessingProcess/PassthroughDocumentService</source.uri>
+        <target.uri>PassthroughDocumentService</target.uri>
+    </wire>
+
+</composite>

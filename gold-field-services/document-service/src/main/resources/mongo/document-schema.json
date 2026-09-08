@@ -1,0 +1,125 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "documentType", "status"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "borrowerId": { "bsonType": "string" },
+      "documentType": {
+        "bsonType": "string",
+        "enum": ["PAYSTUB", "W2", "TAX_1040", "BANK_STATEMENT", "RETIREMENT_STATEMENT", "DRIVERS_LICENSE", "PASSPORT", "SSN_CARD", "PURCHASE_CONTRACT", "APPRAISAL", "TITLE_REPORT", "INSURANCE_BINDER", "VOE", "VOD", "OTHER"]
+      },
+      "category": {
+        "bsonType": "string",
+        "enum": ["INCOME", "ASSET", "IDENTITY", "PROPERTY", "OTHER"]
+      },
+      "originalFileName": { "bsonType": "string" },
+      "storedFileName": { "bsonType": "string" },
+      "fileSize": { "bsonType": "long" },
+      "mimeType": { "bsonType": "string" },
+      "storageUrl": { "bsonType": "string" },
+      "checksum": { "bsonType": "string" },
+      "uploadSource": {
+        "bsonType": "string",
+        "enum": ["WEB_UPLOAD", "MOBILE_UPLOAD", "FTP", "EMAIL", "THIRD_PARTY", "API"]
+      },
+      "ocrData": {
+        "bsonType": "object",
+        "properties": {
+          "extractedText": { "bsonType": "string" },
+          "confidence": { "bsonType": "double", "minimum": 0, "maximum": 1 },
+          "processingTimeMs": { "bsonType": "long" },
+          "ocrEngine": { "bsonType": "string" },
+          "fields": {
+            "bsonType": "object",
+            "additionalProperties": {
+              "bsonType": "object",
+              "properties": {
+                "value": { "bsonType": "string" },
+                "confidence": { "bsonType": "double" },
+                "pageNumber": { "bsonType": "int" },
+                "boundingBox": {
+                  "bsonType": "object",
+                  "properties": {
+                    "x": { "bsonType": "double" },
+                    "y": { "bsonType": "double" },
+                    "width": { "bsonType": "double" },
+                    "height": { "bsonType": "double" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "classification": {
+        "bsonType": "object",
+        "properties": {
+          "classifiedType": { "bsonType": "string" },
+          "confidence": { "bsonType": "double" },
+          "method": {
+            "bsonType": "string",
+            "enum": ["OCR", "AI_MODEL", "MANUAL"]
+          },
+          "classifiedAt": { "bsonType": "date" },
+          "reviewed": { "bsonType": "bool" },
+          "reviewedBy": { "bsonType": "string" },
+          "reviewedAt": { "bsonType": "date" },
+          "overrideType": { "bsonType": "string" }
+        }
+      },
+      "validationResult": {
+        "bsonType": "object",
+        "properties": {
+          "isValid": { "bsonType": "bool" },
+          "validatedAt": { "bsonType": "date" },
+          "issues": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "issueType": { "bsonType": "string" },
+                "severity": { "bsonType": "string" },
+                "message": { "bsonType": "string" },
+                "field": { "bsonType": "string" }
+              }
+            }
+          },
+          "crossCheckResults": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "checkType": { "bsonType": "string" },
+                "result": { "bsonType": "string" },
+                "relatedDocumentId": { "bsonType": "string" },
+                "discrepancy": { "bsonType": "string" }
+              }
+            }
+          }
+        }
+      },
+      "status": {
+        "bsonType": "string",
+        "enum": ["UPLOADED", "PROCESSING", "CLASSIFIED", "OCR_COMPLETE", "VERIFIED", "REJECTED", "ARCHIVED"]
+      },
+      "statusHistory": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "status": { "bsonType": "string" },
+            "timestamp": { "bsonType": "date" },
+            "changedBy": { "bsonType": "string" },
+            "reason": { "bsonType": "string" }
+          }
+        }
+      },
+      "uploadedAt": { "bsonType": "date" },
+      "uploadedBy": { "bsonType": "string" },
+      "processedAt": { "bsonType": "date" },
+      "expiresAt": { "bsonType": "date" }
+    }
+  }
+}

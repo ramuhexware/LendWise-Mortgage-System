@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://lendwise.com/soa/compliance/types"
+            xmlns:tns="http://lendwise.com/soa/compliance/types"
+            elementFormDefault="qualified">
+
+    <!-- ================================================================== -->
+    <!-- Compliance Check Types                                             -->
+    <!-- ================================================================== -->
+
+    <xsd:simpleType name="ComplianceCheckTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="TRID"/>
+            <xsd:enumeration value="QM_ATR"/>
+            <xsd:enumeration value="RESPA"/>
+            <xsd:enumeration value="TILA"/>
+            <xsd:enumeration value="HMDA"/>
+            <xsd:enumeration value="ECOA"/>
+            <xsd:enumeration value="FAIR_LENDING"/>
+            <xsd:enumeration value="STATE_SPECIFIC"/>
+            <xsd:enumeration value="FULL"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="ViolationSeverityEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="CRITICAL"/>
+            <xsd:enumeration value="HIGH"/>
+            <xsd:enumeration value="MEDIUM"/>
+            <xsd:enumeration value="LOW"/>
+            <xsd:enumeration value="WARNING"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="FeeToleranceCategoryEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="ZERO_TOLERANCE"/>
+            <xsd:enumeration value="TEN_PERCENT_TOLERANCE"/>
+            <xsd:enumeration value="NO_TOLERANCE"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Request/Response Types                                             -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ComplianceCheckRequestType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="checkType" type="tns:ComplianceCheckTypeEnum"/>
+
+            <!-- Loan Data -->
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="loanPurpose" type="xsd:string"/>
+            <xsd:element name="loanType" type="xsd:string"/>
+            <xsd:element name="propertyState" type="xsd:string"/>
+
+            <!-- DTI Data -->
+            <xsd:element name="frontEndDTI" type="xsd:decimal"/>
+            <xsd:element name="backEndDTI" type="xsd:decimal"/>
+
+            <!-- Fee Data -->
+            <xsd:element name="pointsAndFees" type="xsd:decimal"/>
+            <xsd:element name="leFees" type="tns:FeeListType" minOccurs="0"/>
+            <xsd:element name="cdFees" type="tns:FeeListType" minOccurs="0"/>
+
+            <!-- TRID Dates -->
+            <xsd:element name="applicationDate" type="xsd:date"/>
+            <xsd:element name="loanEstimateDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="closingDisclosureDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="scheduledClosingDate" type="xsd:date" minOccurs="0"/>
+
+            <!-- APR Data for change-in-circumstance tracking -->
+            <xsd:element name="originalAPR" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="currentAPR" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ComplianceCheckResultType">
+        <xsd:sequence>
+            <xsd:element name="checkId" type="xsd:string"/>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="checkType" type="tns:ComplianceCheckTypeEnum"/>
+            <xsd:element name="overallStatus" type="xsd:string"/>
+
+            <!-- TRID Results -->
+            <xsd:element name="tridCompliant" type="xsd:boolean"/>
+            <xsd:element name="tridDetails" type="tns:TRIDDetailsType" minOccurs="0"/>
+
+            <!-- QM/ATR Results -->
+            <xsd:element name="qmEligible" type="xsd:boolean"/>
+            <xsd:element name="qmDetails" type="tns:QMDetailsType" minOccurs="0"/>
+
+            <!-- Fee Tolerance Results -->
+            <xsd:element name="feeToleranceResult" type="tns:FeeToleranceResultType" minOccurs="0"/>
+
+            <!-- Violations -->
+            <xsd:element name="violations" type="tns:ViolationListType" minOccurs="0"/>
+
+            <xsd:element name="checkedAt" type="xsd:dateTime"/>
+            <xsd:element name="checkedBy" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- TRID Types                                                         -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="TRIDDetailsType">
+        <xsd:sequence>
+            <xsd:element name="leTimingCompliant" type="xsd:boolean"/>
+            <xsd:element name="cdTimingCompliant" type="xsd:boolean"/>
+            <xsd:element name="waitingPeriodRequired" type="xsd:boolean"/>
+            <xsd:element name="waitingPeriodReason" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="earliestClosingDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="aprChangePercent" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- QM/ATR Types                                                       -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="QMDetailsType">
+        <xsd:sequence>
+            <xsd:element name="dtiWithinLimit" type="xsd:boolean"/>
+            <xsd:element name="actualDTI" type="xsd:decimal"/>
+            <xsd:element name="dtiLimit" type="xsd:decimal"/>
+            <xsd:element name="pointsFeesWithinLimit" type="xsd:boolean"/>
+            <xsd:element name="actualPointsFees" type="xsd:decimal"/>
+            <xsd:element name="pointsFeesLimit" type="xsd:decimal"/>
+            <xsd:element name="pointsFeesPercent" type="xsd:decimal"/>
+            <xsd:element name="hasNegativeAmortization" type="xsd:boolean"/>
+            <xsd:element name="hasInterestOnly" type="xsd:boolean"/>
+            <xsd:element name="hasBalloonPayment" type="xsd:boolean"/>
+            <xsd:element name="termWithinLimit" type="xsd:boolean"/>
+            <xsd:element name="incomeDocumented" type="xsd:boolean"/>
+            <xsd:element name="assetsDocumented" type="xsd:boolean"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Fee Tolerance Types                                                -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="FeeListType">
+        <xsd:sequence>
+            <xsd:element name="fee" type="tns:FeeType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="FeeType">
+        <xsd:sequence>
+            <xsd:element name="feeId" type="xsd:string"/>
+            <xsd:element name="feeName" type="xsd:string"/>
+            <xsd:element name="amount" type="xsd:decimal"/>
+            <xsd:element name="toleranceCategory" type="tns:FeeToleranceCategoryEnum"/>
+            <xsd:element name="section" type="xsd:string"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="FeeToleranceResultType">
+        <xsd:sequence>
+            <xsd:element name="isCompliant" type="xsd:boolean"/>
+            <xsd:element name="zeroToleranceCompliant" type="xsd:boolean"/>
+            <xsd:element name="tenPercentToleranceCompliant" type="xsd:boolean"/>
+            <xsd:element name="zeroToleranceDifference" type="xsd:decimal"/>
+            <xsd:element name="tenPercentToleranceDifference" type="xsd:decimal"/>
+            <xsd:element name="tenPercentToleranceLimit" type="xsd:decimal"/>
+            <xsd:element name="feeComparisons" type="tns:FeeComparisonListType" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="FeeComparisonListType">
+        <xsd:sequence>
+            <xsd:element name="comparison" type="tns:FeeComparisonType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="FeeComparisonType">
+        <xsd:sequence>
+            <xsd:element name="feeName" type="xsd:string"/>
+            <xsd:element name="leAmount" type="xsd:decimal"/>
+            <xsd:element name="cdAmount" type="xsd:decimal"/>
+            <xsd:element name="difference" type="xsd:decimal"/>
+            <xsd:element name="toleranceCategory" type="tns:FeeToleranceCategoryEnum"/>
+            <xsd:element name="isCompliant" type="xsd:boolean"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Violation Types                                                    -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="ViolationListType">
+        <xsd:sequence>
+            <xsd:element name="violation" type="tns:ViolationType" maxOccurs="unbounded" minOccurs="0"/>
+            <xsd:element name="violationText" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="ViolationType">
+        <xsd:sequence>
+            <xsd:element name="violationId" type="xsd:string"/>
+            <xsd:element name="code" type="xsd:string"/>
+            <xsd:element name="regulation" type="xsd:string"/>
+            <xsd:element name="severity" type="tns:ViolationSeverityEnum"/>
+            <xsd:element name="description" type="xsd:string"/>
+            <xsd:element name="remediation" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

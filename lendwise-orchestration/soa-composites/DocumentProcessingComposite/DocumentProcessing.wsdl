@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="DocumentProcessing"
+             targetNamespace="http://lendwise.com/soa/document"
+             xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://lendwise.com/soa/document"
+             xmlns:types="http://lendwise.com/soa/document/types"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:plnk="http://docs.oasis-open.org/wsbpel/2.0/plnktype">
+
+    <!-- Import XSD -->
+    <types>
+        <xsd:schema>
+            <xsd:import namespace="http://lendwise.com/soa/document/types"
+                        schemaLocation="xsd/DocumentTypes.xsd"/>
+        </xsd:schema>
+    </types>
+
+    <!-- Messages -->
+    <message name="ProcessDocumentRequest">
+        <part name="documentRequest" element="types:DocumentRequestType"/>
+    </message>
+    <message name="ProcessDocumentResponse">
+        <part name="documentResult" element="types:DocumentResultType"/>
+    </message>
+    <message name="GetChecklistRequest">
+        <part name="loanId" type="xsd:string"/>
+    </message>
+    <message name="GetChecklistResponse">
+        <part name="checklist" element="types:DocumentChecklistType"/>
+    </message>
+
+    <!-- Port Type -->
+    <portType name="DocumentProcessingPortType">
+        <operation name="processDocument">
+            <input message="tns:ProcessDocumentRequest"/>
+            <output message="tns:ProcessDocumentResponse"/>
+        </operation>
+        <operation name="getChecklist">
+            <input message="tns:GetChecklistRequest"/>
+            <output message="tns:GetChecklistResponse"/>
+        </operation>
+    </portType>
+
+    <!-- SOAP Binding -->
+    <binding name="DocumentProcessingSOAPBinding" type="tns:DocumentProcessingPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="processDocument">
+            <soap:operation soapAction="http://lendwise.com/soa/document/processDocument"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+        <operation name="getChecklist">
+            <soap:operation soapAction="http://lendwise.com/soa/document/getChecklist"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <!-- Service -->
+    <service name="DocumentProcessingService">
+        <port name="DocumentProcessingPort" binding="tns:DocumentProcessingSOAPBinding">
+            <soap:address location="http://localhost:7001/soa-infra/services/lendwise/DocumentProcessingComposite/DocumentProcessingService"/>
+        </port>
+    </service>
+
+    <!-- Partner Link Types -->
+    <plnk:partnerLinkType name="DocumentProcessingPLT">
+        <plnk:role name="DocumentProcessingProvider" portType="tns:DocumentProcessingPortType"/>
+    </plnk:partnerLinkType>
+
+    <plnk:partnerLinkType name="PassthroughPLT">
+        <plnk:role name="PassthroughProvider" portType="tns:DocumentProcessingPortType"/>
+    </plnk:partnerLinkType>
+
+</definitions>

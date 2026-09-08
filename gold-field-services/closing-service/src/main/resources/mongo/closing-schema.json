@@ -1,0 +1,104 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "closingDisclosure": {
+        "bsonType": "object",
+        "properties": {
+          "version": { "bsonType": "int" },
+          "cdDate": { "bsonType": "date" },
+          "closingDate": { "bsonType": "date" },
+          "disbursementDate": { "bsonType": "date" },
+          "settlementAgent": { "bsonType": "string" },
+          "settlementLocation": { "bsonType": "string" },
+          "loanAmount": { "bsonType": "decimal" },
+          "interestRate": { "bsonType": "double" },
+          "monthlyPi": { "bsonType": "decimal" },
+          "prepaymentPenalty": { "bsonType": "bool" },
+          "balloonPayment": { "bsonType": "bool" }
+        }
+      },
+      "lineItems": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "section": {
+              "bsonType": "string",
+              "enum": ["A_ORIGINATION", "B_SERVICES_NOT_SHOP", "C_SERVICES_SHOP", "D_TOTAL_LOAN_COSTS", "E_TAXES", "F_PREPAIDS", "G_ESCROW", "H_OTHER"]
+            },
+            "lineNumber": { "bsonType": "string" },
+            "description": { "bsonType": "string" },
+            "borrowerPaidAtClose": { "bsonType": "decimal" },
+            "borrowerPaidBeforeClose": { "bsonType": "decimal" },
+            "sellerPaidAtClose": { "bsonType": "decimal" },
+            "sellerPaidBeforeClose": { "bsonType": "decimal" },
+            "paidByOthers": { "bsonType": "decimal" },
+            "leAmount": { "bsonType": "decimal" },
+            "toleranceType": {
+              "bsonType": "string",
+              "enum": ["ZERO", "TEN_PERCENT", "NO_LIMIT"]
+            },
+            "variance": { "bsonType": "decimal" }
+          }
+        }
+      },
+      "cashToClose": {
+        "bsonType": "object",
+        "properties": {
+          "totalClosingCosts": { "bsonType": "decimal" },
+          "closingCostsPaidBefore": { "bsonType": "decimal" },
+          "closingCostsFinanced": { "bsonType": "decimal" },
+          "downPayment": { "bsonType": "decimal" },
+          "deposit": { "bsonType": "decimal" },
+          "fundsForBorrower": { "bsonType": "decimal" },
+          "sellerCredits": { "bsonType": "decimal" },
+          "adjustments": { "bsonType": "decimal" },
+          "cashToClose": { "bsonType": "decimal" },
+          "cashFromBorrower": { "bsonType": "bool" }
+        }
+      },
+      "changeOfCircumstances": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "cocId": { "bsonType": "string" },
+            "cocDate": { "bsonType": "date" },
+            "cocType": {
+              "bsonType": "string",
+              "enum": ["RATE_CHANGE", "CLOSING_DATE_CHANGE", "APR_CHANGE", "LOAN_AMOUNT_CHANGE", "BORROWER_REQUEST", "OTHER"]
+            },
+            "reason": { "bsonType": "string" },
+            "requiresRedisclosure": { "bsonType": "bool" },
+            "waitingPeriodWaived": { "bsonType": "bool" },
+            "waiverReason": { "bsonType": "string" },
+            "previousCdVersion": { "bsonType": "int" },
+            "newCdVersion": { "bsonType": "int" },
+            "approvedBy": { "bsonType": "string" },
+            "approvedDate": { "bsonType": "date" }
+          }
+        }
+      },
+      "status": {
+        "bsonType": "string",
+        "enum": ["DRAFT", "PENDING_REVIEW", "ISSUED", "DELIVERED", "SIGNED", "CLOSING_SCHEDULED", "CLOSED", "FUNDED", "CANCELLED"]
+      },
+      "issuedDate": { "bsonType": "date" },
+      "issuedBy": { "bsonType": "string" },
+      "deliveredDate": { "bsonType": "date" },
+      "deliveryMethod": {
+        "bsonType": "string",
+        "enum": ["MAIL", "EMAIL", "IN_PERSON", "ESIGN"]
+      },
+      "signedDate": { "bsonType": "date" },
+      "closedDate": { "bsonType": "date" },
+      "fundedDate": { "bsonType": "date" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="FileAdapterInbound"
+                adapter="file"
+                wsdlLocation="FileAdapter_Inbound.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- File Adapter - Inbound Configuration                               -->
+    <!-- Polls /documents/incoming directory for new document uploads       -->
+    <!-- Supports PDF, JPG, PNG files                                       -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/FileAdapter"
+                        UIConnectionName="FileAdapter"
+                        adapterRef=""/>
+
+    <endpoint-activation portType="Read_ptt" operation="Read">
+        <activation-spec className="oracle.tip.adapter.file.inbound.FileActivationSpec">
+            <!-- Physical directory to poll for incoming documents -->
+            <property name="PhysicalDirectory" value="/documents/incoming"/>
+
+            <!-- Logical directory (can be overridden at deployment) -->
+            <property name="LogicalDirectory" value="incoming-documents"/>
+
+            <!-- File patterns to include -->
+            <property name="IncludeFiles" value=".*\.(pdf|PDF|jpg|JPG|jpeg|JPEG|png|PNG|tif|TIF|tiff|TIFF)"/>
+
+            <!-- Exclude temporary files -->
+            <property name="ExcludeFiles" value=".*\.tmp|.*\.temp|\..*"/>
+
+            <!-- Polling frequency in seconds -->
+            <property name="PollingFrequency" value="30"/>
+
+            <!-- Minimum file age (seconds) to ensure file is fully written -->
+            <property name="MinimumAge" value="5"/>
+
+            <!-- Do not delete file after reading (move to processed folder) -->
+            <property name="DeleteFile" value="false"/>
+
+            <!-- Archive processed files -->
+            <property name="PhysicalArchiveDirectory" value="/documents/processed"/>
+            <property name="LogicalArchiveDirectory" value="processed-documents"/>
+
+            <!-- Use file timestamps for ordering -->
+            <property name="UseFileOrderingByArrival" value="true"/>
+
+            <!-- Single threaded processing -->
+            <property name="SingleThreadModel" value="true"/>
+
+            <!-- Recursive directory scanning disabled -->
+            <property name="Recursive" value="false"/>
+
+            <!-- Thread count for parallel processing -->
+            <property name="ThreadCount" value="1"/>
+
+            <!-- Maximum number of files to process per poll -->
+            <property name="MaxRaiseSize" value="10"/>
+        </activation-spec>
+    </endpoint-activation>
+
+</adapter-config>

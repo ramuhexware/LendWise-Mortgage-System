@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="ComplianceProcess"
+             targetNamespace="http://lendwise.com/soa/compliance"
+             xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://lendwise.com/soa/compliance"
+             xmlns:types="http://lendwise.com/soa/compliance/types"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:plnk="http://docs.oasis-open.org/wsbpel/2.0/plnktype">
+
+    <!-- Import XSD -->
+    <types>
+        <xsd:schema>
+            <xsd:import namespace="http://lendwise.com/soa/compliance/types"
+                        schemaLocation="xsd/ComplianceTypes.xsd"/>
+        </xsd:schema>
+    </types>
+
+    <!-- Messages -->
+    <message name="ComplianceCheckRequest">
+        <part name="complianceRequest" element="types:ComplianceCheckRequestType"/>
+    </message>
+    <message name="ComplianceCheckResponse">
+        <part name="complianceResult" element="types:ComplianceCheckResultType"/>
+    </message>
+
+    <!-- Port Type -->
+    <portType name="CompliancePortType">
+        <operation name="runComplianceCheck">
+            <input message="tns:ComplianceCheckRequest"/>
+            <output message="tns:ComplianceCheckResponse"/>
+        </operation>
+    </portType>
+
+    <!-- SOAP Binding -->
+    <binding name="ComplianceSOAPBinding" type="tns:CompliancePortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="runComplianceCheck">
+            <soap:operation soapAction="http://lendwise.com/soa/compliance/runComplianceCheck"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <!-- Service -->
+    <service name="ComplianceService">
+        <port name="CompliancePort" binding="tns:ComplianceSOAPBinding">
+            <soap:address location="http://localhost:7001/soa-infra/services/lendwise/ComplianceComposite/ComplianceService"/>
+        </port>
+    </service>
+
+    <!-- Partner Link Types -->
+    <plnk:partnerLinkType name="CompliancePLT">
+        <plnk:role name="ComplianceProvider" portType="tns:CompliancePortType"/>
+    </plnk:partnerLinkType>
+
+    <plnk:partnerLinkType name="PassthroughPLT">
+        <plnk:role name="PassthroughProvider" portType="tns:CompliancePortType"/>
+    </plnk:partnerLinkType>
+
+</definitions>

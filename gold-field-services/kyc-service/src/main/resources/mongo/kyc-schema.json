@@ -1,0 +1,98 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["borrowerId", "status"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "borrowerId": { "bsonType": "string" },
+      "loanId": { "bsonType": "string" },
+      "verificationId": { "bsonType": "string" },
+      "verificationType": {
+        "bsonType": "string",
+        "enum": ["KYC", "CIP", "OFAC", "IDENTITY", "ADDRESS", "EMPLOYMENT"]
+      },
+      "status": {
+        "bsonType": "string",
+        "enum": ["PENDING", "IN_PROGRESS", "VERIFIED", "FAILED", "EXPIRED", "MANUAL_REVIEW"]
+      },
+      "identityVerification": {
+        "bsonType": "object",
+        "properties": {
+          "fullName": { "bsonType": "string" },
+          "dateOfBirth": { "bsonType": "date" },
+          "ssn": { "bsonType": "string" },
+          "documentType": {
+            "bsonType": "string",
+            "enum": ["DRIVERS_LICENSE", "PASSPORT", "STATE_ID", "MILITARY_ID"]
+          },
+          "documentNumber": { "bsonType": "string" },
+          "documentExpiry": { "bsonType": "date" },
+          "documentState": { "bsonType": "string" },
+          "verificationScore": { "bsonType": "double" },
+          "matchResults": {
+            "bsonType": "object",
+            "properties": {
+              "nameMatch": { "bsonType": "bool" },
+              "dobMatch": { "bsonType": "bool" },
+              "ssnMatch": { "bsonType": "bool" },
+              "addressMatch": { "bsonType": "bool" }
+            }
+          }
+        }
+      },
+      "addressVerification": {
+        "bsonType": "object",
+        "properties": {
+          "street": { "bsonType": "string" },
+          "city": { "bsonType": "string" },
+          "state": { "bsonType": "string" },
+          "zip": { "bsonType": "string" },
+          "verified": { "bsonType": "bool" },
+          "verificationSource": { "bsonType": "string" },
+          "yearsAtAddress": { "bsonType": "double" }
+        }
+      },
+      "ofacScreening": {
+        "bsonType": "object",
+        "properties": {
+          "screened": { "bsonType": "bool" },
+          "screeningDate": { "bsonType": "date" },
+          "result": {
+            "bsonType": "string",
+            "enum": ["CLEAR", "POTENTIAL_MATCH", "CONFIRMED_MATCH"]
+          },
+          "matchDetails": { "bsonType": "string" }
+        }
+      },
+      "cipCompliance": {
+        "bsonType": "object",
+        "properties": {
+          "cipVerified": { "bsonType": "bool" },
+          "verificationDate": { "bsonType": "date" },
+          "documentationComplete": { "bsonType": "bool" },
+          "riskRating": {
+            "bsonType": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          }
+        }
+      },
+      "vendorResponse": {
+        "bsonType": "object",
+        "properties": {
+          "vendorName": { "bsonType": "string" },
+          "transactionId": { "bsonType": "string" },
+          "requestDate": { "bsonType": "date" },
+          "responseDate": { "bsonType": "date" },
+          "rawResponse": { "bsonType": "string" }
+        }
+      },
+      "failureReason": { "bsonType": "string" },
+      "manualReviewNotes": { "bsonType": "string" },
+      "reviewedBy": { "bsonType": "string" },
+      "reviewedDate": { "bsonType": "date" },
+      "expiresAt": { "bsonType": "date" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

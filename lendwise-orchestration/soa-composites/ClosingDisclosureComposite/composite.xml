@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<composite name="ClosingDisclosureComposite"
+           revision="1.0"
+           label="Closing Disclosure Generation and Delivery"
+           mode="active"
+           state="on"
+           xmlns="http://xmlns.oracle.com/sca/1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
+           xmlns:ui="http://xmlns.oracle.com/soa/designer/">
+
+    <!-- ================================================================== -->
+    <!-- Flow 6: Closing Disclosure                                         -->
+    <!-- - CD document generation                                           -->
+    <!-- - Borrower notification via JMS                                    -->
+    <!-- - eSign integration                                                -->
+    <!-- - Title/Settlement coordination                                    -->
+    <!-- ================================================================== -->
+
+    <!-- Import WSDLs -->
+    <import namespace="http://lendwise.com/soa/closing"
+            location="ClosingDisclosureProcess.wsdl"
+            importType="wsdl"/>
+
+    <!-- ================================================================== -->
+    <!-- Exposed Services                                                   -->
+    <!-- ================================================================== -->
+
+    <service name="ClosingDisclosureService" ui:wsdlLocation="ClosingDisclosureProcess.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/closing#wsdl.interface(ClosingDisclosurePortType)"/>
+        <binding.ws port="http://lendwise.com/soa/closing#wsdl.endpoint(ClosingDisclosureService/ClosingDisclosurePort)"/>
+    </service>
+
+    <service name="ClosingDisclosureRESTService">
+        <interface.wsdl interface="http://lendwise.com/soa/closing#wsdl.interface(ClosingDisclosurePortType)"/>
+        <binding.rest location="/closing/api"
+                      method="POST"
+                      contentType="application/json"/>
+    </service>
+
+    <!-- JMS Queue Listener - Receives CD generation requests -->
+    <service name="CDRequestQueueListener" ui:wsdlLocation="adapters/JMSAdapter_CDRequest.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(Consume_ptt)"/>
+        <binding.jca config="adapters/JMSAdapter_CDRequest.jca"/>
+    </service>
+
+    <!-- ================================================================== -->
+    <!-- BPEL Component                                                     -->
+    <!-- ================================================================== -->
+
+    <component name="ClosingDisclosureProcess" version="2.0">
+        <implementation.bpel src="ClosingDisclosureProcess.bpel"/>
+        <componentType>
+            <service name="ClosingDisclosureService">
+                <interface.wsdl interface="http://lendwise.com/soa/closing#wsdl.interface(ClosingDisclosurePortType)"/>
+            </service>
+            <service name="CDRequestQueueListener">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(Consume_ptt)"/>
+            </service>
+
+            <reference name="ClosingDB">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(ClosingDB_ptt)"/>
+            </reference>
+            <reference name="NotificationQueue">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(Produce_ptt)"/>
+            </reference>
+            <reference name="ESignService">
+                <interface.wsdl interface="http://lendwise.com/soa/esign#wsdl.interface(ESignPortType)"/>
+            </reference>
+            <reference name="TitleService">
+                <interface.wsdl interface="http://lendwise.com/soa/title#wsdl.interface(TitlePortType)"/>
+            </reference>
+            <reference name="PassthroughClosingService">
+                <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+            </reference>
+        </componentType>
+    </component>
+
+    <!-- ================================================================== -->
+    <!-- External References                                                -->
+    <!-- ================================================================== -->
+
+    <!-- Database Adapter - Closing documents -->
+    <reference name="ClosingDB" ui:wsdlLocation="adapters/ClosingDB.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(ClosingDB_ptt)"/>
+        <binding.jca config="adapters/ClosingDB.jca"/>
+    </reference>
+
+    <!-- JMS Adapter - Notification Queue (outbound) -->
+    <reference name="NotificationQueue" ui:wsdlLocation="adapters/JMSAdapter_Notification.wsdl">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(Produce_ptt)"/>
+        <binding.jca config="adapters/JMSAdapter_Notification.jca"/>
+    </reference>
+
+    <!-- eSign Service (DocuSign/Adobe Sign integration) -->
+    <reference name="ESignService">
+        <interface.wsdl interface="http://lendwise.com/soa/esign#wsdl.interface(ESignPortType)"/>
+        <binding.rest location="${ESIGN_SERVICE_URL}/api/envelopes"
+                      method="POST"
+                      contentType="application/json">
+            <property name="Authorization" source="Bearer ${ESIGN_API_KEY}"/>
+        </binding.rest>
+    </reference>
+
+    <!-- Title Company Integration -->
+    <reference name="TitleService">
+        <interface.wsdl interface="http://lendwise.com/soa/title#wsdl.interface(TitlePortType)"/>
+        <binding.ws port="http://lendwise.com/soa/title#wsdl.endpoint(TitleService/TitlePort)"
+                    location="${TITLE_SERVICE_ENDPOINT}"/>
+    </reference>
+
+    <!-- Pass-through to Gold Field closing-service -->
+    <reference name="PassthroughClosingService">
+        <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
+        <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/closing"
+                      method="POST"
+                      contentType="application/json"/>
+    </reference>
+
+    <!-- ================================================================== -->
+    <!-- Wiring                                                             -->
+    <!-- ================================================================== -->
+
+    <wire>
+        <source.uri>ClosingDisclosureService</source.uri>
+        <target.uri>ClosingDisclosureProcess/ClosingDisclosureService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureRESTService</source.uri>
+        <target.uri>ClosingDisclosureProcess/ClosingDisclosureService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>CDRequestQueueListener</source.uri>
+        <target.uri>ClosingDisclosureProcess/CDRequestQueueListener</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureProcess/ClosingDB</source.uri>
+        <target.uri>ClosingDB</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureProcess/NotificationQueue</source.uri>
+        <target.uri>NotificationQueue</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureProcess/ESignService</source.uri>
+        <target.uri>ESignService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureProcess/TitleService</source.uri>
+        <target.uri>TitleService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureProcess/PassthroughClosingService</source.uri>
+        <target.uri>PassthroughClosingService</target.uri>
+    </wire>
+
+</composite>

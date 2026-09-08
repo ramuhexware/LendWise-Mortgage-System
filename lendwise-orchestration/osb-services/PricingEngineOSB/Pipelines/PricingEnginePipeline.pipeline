@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config">
+    <con:coreEntry>
+        <con:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
+            <con:binding>
+                <con:name>PricingSOAPBinding</con:name>
+                <con:namespace>http://lendwise.com/soa/pricing</con:namespace>
+            </con:binding>
+        </con:binding>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:flow>
+            <con:route-node name="RouteToPricingComposite">
+                <con:context/>
+                <con:actions>
+                    <con1:route>
+                        <con2:id>id_pricing_route_01</con2:id>
+                        <con1:service ref="PricingEngineOSB/BusinessServices/PricingEngineSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con1:operation-discover>true</con1:operation-discover>
+                    </con1:route>
+                </con:actions>
+            </con:route-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

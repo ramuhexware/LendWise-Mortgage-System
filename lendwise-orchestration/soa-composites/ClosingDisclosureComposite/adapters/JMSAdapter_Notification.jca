@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="JMSAdapter_Notification"
+                adapter="jms"
+                wsdlLocation="JMSAdapter_Notification.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- JMS Adapter - Notification Queue (Outbound)                        -->
+    <!-- Sends borrower notifications (email, SMS, push)                    -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/wls/LendWiseJMSConnectionFactory"
+                        UIJmsProvider="WLSJMS"
+                        adapterRef=""/>
+
+    <endpoint-interaction portType="Produce_ptt" operation="Produce">
+        <interaction-spec className="oracle.tip.adapter.jms.outbound.JmsProduceInteractionSpec">
+            <!-- JMS Destination -->
+            <property name="DestinationName" value="jms/lendwise/NotificationQueue"/>
+
+            <!-- Message Type -->
+            <property name="PayloadType" value="TextMessage"/>
+
+            <!-- Delivery Mode -->
+            <property name="DeliveryMode" value="Persistent"/>
+
+            <!-- Time to Live (milliseconds, 0 = unlimited) -->
+            <property name="TimeToLive" value="86400000"/>
+
+            <!-- Priority (0-9, 4 is default) -->
+            <property name="Priority" value="5"/>
+
+            <!-- Transaction Settings -->
+            <property name="UseXa" value="true"/>
+
+            <!-- Custom JMS Properties -->
+            <property name="JmsType" value="CLOSING_NOTIFICATION"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+</adapter-config>

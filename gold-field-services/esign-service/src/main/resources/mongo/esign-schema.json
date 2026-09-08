@@ -1,0 +1,97 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["loanId", "sessionType", "status"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "loanId": { "bsonType": "string" },
+      "cdId": { "bsonType": "string" },
+      "sessionType": {
+        "bsonType": "string",
+        "enum": ["INITIAL_DISCLOSURES", "CLOSING_PACKAGE", "AMENDMENT", "STANDALONE"]
+      },
+      "status": {
+        "bsonType": "string",
+        "enum": ["CREATED", "SENT", "DELIVERED", "VIEWED", "PARTIALLY_SIGNED", "COMPLETED", "DECLINED", "VOIDED", "EXPIRED"]
+      },
+      "vendor": {
+        "bsonType": "object",
+        "properties": {
+          "name": {
+            "bsonType": "string",
+            "enum": ["DOCUSIGN", "SNAPDOCS", "NOTARIZE", "OTHER"]
+          },
+          "sessionId": { "bsonType": "string" },
+          "envelopeId": { "bsonType": "string" },
+          "webhookUrl": { "bsonType": "string" }
+        }
+      },
+      "documents": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "documentId": { "bsonType": "string" },
+            "documentName": { "bsonType": "string" },
+            "documentType": { "bsonType": "string" },
+            "pageCount": { "bsonType": "int" },
+            "vendorDocId": { "bsonType": "string" },
+            "status": {
+              "bsonType": "string",
+              "enum": ["PENDING", "SIGNED", "DECLINED"]
+            },
+            "signedAt": { "bsonType": "date" }
+          }
+        }
+      },
+      "signers": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "signerId": { "bsonType": "string" },
+            "signerType": {
+              "bsonType": "string",
+              "enum": ["BORROWER", "CO_BORROWER", "SELLER", "NOTARY", "WITNESS", "TITLE_AGENT"]
+            },
+            "name": { "bsonType": "string" },
+            "email": { "bsonType": "string" },
+            "phone": { "bsonType": "string" },
+            "signingOrder": { "bsonType": "int" },
+            "status": {
+              "bsonType": "string",
+              "enum": ["PENDING", "SENT", "DELIVERED", "VIEWED", "SIGNED", "DECLINED"]
+            },
+            "sentAt": { "bsonType": "date" },
+            "deliveredAt": { "bsonType": "date" },
+            "viewedAt": { "bsonType": "date" },
+            "signedAt": { "bsonType": "date" },
+            "declinedAt": { "bsonType": "date" },
+            "declineReason": { "bsonType": "string" },
+            "ipAddress": { "bsonType": "string" },
+            "userAgent": { "bsonType": "string" }
+          }
+        }
+      },
+      "timeline": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "event": { "bsonType": "string" },
+            "timestamp": { "bsonType": "date" },
+            "actor": { "bsonType": "string" },
+            "details": { "bsonType": "string" }
+          }
+        }
+      },
+      "expirationDate": { "bsonType": "date" },
+      "completedDate": { "bsonType": "date" },
+      "voidedDate": { "bsonType": "date" },
+      "voidReason": { "bsonType": "string" },
+      "createdBy": { "bsonType": "string" },
+      "createdAt": { "bsonType": "date" },
+      "updatedAt": { "bsonType": "date" }
+    }
+  }
+}

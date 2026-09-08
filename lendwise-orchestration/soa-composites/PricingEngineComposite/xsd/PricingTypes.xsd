@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://lendwise.com/soa/pricing/types"
+            xmlns:tns="http://lendwise.com/soa/pricing/types"
+            elementFormDefault="qualified">
+
+    <!-- ================================================================== -->
+    <!-- Pricing Types                                                      -->
+    <!-- ================================================================== -->
+
+    <xsd:simpleType name="LockStatusEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PENDING"/>
+            <xsd:enumeration value="LOCKED"/>
+            <xsd:enumeration value="EXTENDED"/>
+            <xsd:enumeration value="RELOCKED"/>
+            <xsd:enumeration value="EXPIRED"/>
+            <xsd:enumeration value="CANCELLED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="LoanTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="CONVENTIONAL"/>
+            <xsd:enumeration value="FHA"/>
+            <xsd:enumeration value="VA"/>
+            <xsd:enumeration value="USDA"/>
+            <xsd:enumeration value="JUMBO"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="PropertyTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="SFR"/>
+            <xsd:enumeration value="CONDO"/>
+            <xsd:enumeration value="TOWNHOUSE"/>
+            <xsd:enumeration value="MULTI_UNIT"/>
+            <xsd:enumeration value="MANUFACTURED"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:simpleType name="OccupancyTypeEnum">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="PRIMARY"/>
+            <xsd:enumeration value="SECOND_HOME"/>
+            <xsd:enumeration value="INVESTMENT"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- ================================================================== -->
+    <!-- Request/Response Types                                             -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="PricingRequestType">
+        <xsd:sequence>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="loanTerm" type="xsd:int"/>
+            <xsd:element name="loanType" type="tns:LoanTypeEnum"/>
+            <xsd:element name="loanPurpose" type="xsd:string"/>
+            <xsd:element name="propertyType" type="tns:PropertyTypeEnum"/>
+            <xsd:element name="occupancy" type="tns:OccupancyTypeEnum"/>
+            <xsd:element name="ltv" type="xsd:decimal"/>
+            <xsd:element name="cltv" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="creditScore" type="xsd:int"/>
+            <xsd:element name="dti" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="requestedLockDays" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="requestedRate" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="propertyState" type="xsd:string"/>
+            <xsd:element name="propertyZip" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PricingResultType">
+        <xsd:sequence>
+            <xsd:element name="lockId" type="xsd:string"/>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="baseRate" type="xsd:decimal"/>
+            <xsd:element name="llpaAdjustment" type="xsd:decimal"/>
+            <xsd:element name="finalRate" type="xsd:decimal"/>
+            <xsd:element name="apr" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="monthlyPayment" type="xsd:decimal"/>
+            <xsd:element name="lockStatus" type="tns:LockStatusEnum"/>
+            <xsd:element name="lockDate" type="xsd:dateTime" minOccurs="0"/>
+            <xsd:element name="lockExpirationDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="lockDays" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="pricePoints" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="rebateCredits" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="llpaBreakdown" type="tns:LLPABreakdownType" minOccurs="0"/>
+            <xsd:element name="scenarios" type="tns:PricingScenarioListType" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- LLPA Breakdown Types                                               -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="LLPABreakdownType">
+        <xsd:sequence>
+            <xsd:element name="adjustment" type="tns:LLPAAdjustmentType" maxOccurs="unbounded"/>
+            <xsd:element name="totalAdjustment" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="LLPAAdjustmentType">
+        <xsd:sequence>
+            <xsd:element name="category" type="xsd:string"/>
+            <xsd:element name="factor" type="xsd:string"/>
+            <xsd:element name="adjustment" type="xsd:decimal"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Pricing Scenario Types                                             -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="PricingScenarioListType">
+        <xsd:sequence>
+            <xsd:element name="scenario" type="tns:PricingScenarioType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PricingScenarioType">
+        <xsd:sequence>
+            <xsd:element name="scenarioName" type="xsd:string"/>
+            <xsd:element name="rate" type="xsd:decimal"/>
+            <xsd:element name="points" type="xsd:decimal"/>
+            <xsd:element name="monthlyPayment" type="xsd:decimal"/>
+            <xsd:element name="apr" type="xsd:decimal"/>
+            <xsd:element name="totalInterest" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Amortization Types                                                 -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="AmortizationScheduleType">
+        <xsd:sequence>
+            <xsd:element name="loanAmount" type="xsd:decimal"/>
+            <xsd:element name="interestRate" type="xsd:decimal"/>
+            <xsd:element name="termMonths" type="xsd:int"/>
+            <xsd:element name="monthlyPayment" type="xsd:decimal"/>
+            <xsd:element name="totalInterest" type="xsd:decimal"/>
+            <xsd:element name="totalPayments" type="xsd:decimal"/>
+            <xsd:element name="entries" type="tns:AmortizationEntryListType"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="AmortizationEntryListType">
+        <xsd:sequence>
+            <xsd:element name="entry" type="tns:AmortizationEntryType" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="AmortizationEntryType">
+        <xsd:sequence>
+            <xsd:element name="period" type="xsd:int"/>
+            <xsd:element name="paymentDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="payment" type="xsd:decimal"/>
+            <xsd:element name="principal" type="xsd:decimal"/>
+            <xsd:element name="interest" type="xsd:decimal"/>
+            <xsd:element name="balance" type="xsd:decimal"/>
+            <xsd:element name="cumulativeInterest" type="xsd:decimal" minOccurs="0"/>
+            <xsd:element name="cumulativePrincipal" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <!-- ================================================================== -->
+    <!-- Rate Lock Types                                                    -->
+    <!-- ================================================================== -->
+
+    <xsd:complexType name="RateLockType">
+        <xsd:sequence>
+            <xsd:element name="lockId" type="xsd:string"/>
+            <xsd:element name="loanId" type="xsd:string"/>
+            <xsd:element name="lockedRate" type="xsd:decimal"/>
+            <xsd:element name="baseRate" type="xsd:decimal"/>
+            <xsd:element name="llpaAdjustment" type="xsd:decimal"/>
+            <xsd:element name="pricePoints" type="xsd:decimal"/>
+            <xsd:element name="lockDate" type="xsd:dateTime"/>
+            <xsd:element name="expirationDate" type="xsd:date"/>
+            <xsd:element name="lockDays" type="xsd:int"/>
+            <xsd:element name="status" type="tns:LockStatusEnum"/>
+            <xsd:element name="investor" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="lockedBy" type="xsd:string"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

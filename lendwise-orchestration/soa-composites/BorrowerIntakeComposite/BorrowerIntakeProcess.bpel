@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="BorrowerIntakeProcess"
+         targetNamespace="http://lendwise.com/soa/borrower/bpel"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:bpws="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:tns="http://lendwise.com/soa/borrower/bpel"
+         xmlns:borrower="http://lendwise.com/soa/borrower"
+         xmlns:types="http://lendwise.com/soa/borrower/types"
+         xmlns:passthrough="http://lendwise.com/soa/passthrough">
+
+    <!-- ================================================================== -->
+    <!-- Partner Links                                                      -->
+    <!-- ================================================================== -->
+
+    <partnerLinks>
+        <!-- Client Partner Link -->
+        <partnerLink name="BorrowerIntakeClient"
+                     partnerLinkType="borrower:BorrowerIntakePLT"
+                     myRole="BorrowerIntakeProvider"/>
+
+        <!-- Pass-through Service for Gold Field -->
+        <partnerLink name="PassthroughService"
+                     partnerLinkType="passthrough:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+
+        <!-- KYC Service -->
+        <partnerLink name="KYCService"
+                     partnerLinkType="passthrough:PassthroughPLT"
+                     partnerRole="PassthroughProvider"/>
+    </partnerLinks>
+
+    <!-- ================================================================== -->
+    <!-- Variables                                                          -->
+    <!-- ================================================================== -->
+
+    <variables>
+        <!-- Input/Output Variables -->
+        <variable name="inputVariable" messageType="borrower:SubmitBorrowerApplicationRequest"/>
+        <variable name="outputVariable" messageType="borrower:SubmitBorrowerApplicationResponse"/>
+
+        <!-- Pre-qualification Variables -->
+        <variable name="preQualInput" messageType="borrower:PreQualifyRequest"/>
+        <variable name="preQualOutput" messageType="borrower:PreQualifyResponse"/>
+
+        <!-- Ratio Calculation Variables -->
+        <variable name="ratioInput" messageType="borrower:CalculateRatiosRequest"/>
+        <variable name="ratioOutput" messageType="borrower:CalculateRatiosResponse"/>
+
+        <!-- Internal Variables -->
+        <variable name="borrowerData" element="types:BorrowerType"/>
+        <variable name="loanData" element="types:LoanRequestType"/>
+        <variable name="ratiosOutput" element="types:RatioOutputType"/>
+        <variable name="kycResult" type="xsd:string"/>
+        <variable name="loanId" type="xsd:string"/>
+
+        <!-- Fault Variable -->
+        <variable name="faultVariable" messageType="borrower:BorrowerFault"/>
+    </variables>
+
+    <!-- ================================================================== -->
+    <!-- Fault Handlers                                                     -->
+    <!-- ================================================================== -->
+
+    <faultHandlers>
+        <catchAll>
+            <sequence name="HandleFault">
+                <assign name="AssignFaultInfo">
+                    <copy>
+                        <from>
+                            <literal>
+                                <types:FaultType>
+                                    <types:errorCode>BORROWER_ERROR</types:errorCode>
+                                    <types:errorMessage>An error occurred during borrower intake processing</types:errorMessage>
+                                </types:FaultType>
+                            </literal>
+                        </from>
+                        <to variable="faultVariable" part="faultInfo"/>
+                    </copy>
+                </assign>
+                <reply name="ReplyWithFault"
+                       partnerLink="BorrowerIntakeClient"
+                       operation="submitBorrowerApplication"
+                       variable="faultVariable"
+                       faultName="borrower:fault"/>
+            </sequence>
+        </catchAll>
+    </faultHandlers>
+
+    <!-- ================================================================== -->
+    <!-- Main Sequence                                                      -->
+    <!-- ================================================================== -->
+
+    <sequence name="MainSequence">
+
+        <!-- Receive borrower application -->
+        <receive name="ReceiveApplication"
+                 partnerLink="BorrowerIntakeClient"
+                 operation="submitBorrowerApplication"
+                 variable="inputVariable"
+                 createInstance="yes"/>
+
+        <!-- Extract borrower and loan data -->
+        <assign name="ExtractData">
+            <copy>
+                <from>$inputVariable.borrowerApplication/types:borrower</from>
+                <to variable="borrowerData"/>
+            </copy>
+            <copy>
+                <from>$inputVariable.borrowerApplication/types:loanRequest</from>
+                <to variable="loanData"/>
+            </copy>
+            <copy>
+                <from>ora:generateGUID()</from>
+                <to variable="loanId"/>
+            </copy>
+        </assign>
+
+        <!-- ============================================================== -->
+        <!-- Java Embedding: Calculate DTI/LTV/PITI Ratios                  -->
+        <!-- Uses DTICalculator from SCA-INF/lib/dti-calculator.jar         -->
+        <!-- ============================================================== -->
+
+        <bpelx:exec name="CalculateDTI" language="java">
+            <![CDATA[
+                com.lendwise.adapters.DTICalculator calculator = new com.lendwise.adapters.DTICalculator();
+
+                // Get input values from BPEL variables
+                double monthlyIncome = ((Number)getVariableData("borrowerData", "/types:borrower/types:employment/types:monthlyIncome")).doubleValue();
+
+                // Calculate total monthly debt from liabilities
+                double monthlyDebt = 0.0;
+                try {
+                    org.w3c.dom.NodeList liabilities = (org.w3c.dom.NodeList)getVariableData("borrowerData", "/types:borrower/types:liabilities/types:liability");
+                    for (int i = 0; i < liabilities.getLength(); i++) {
+                        org.w3c.dom.Node liability = liabilities.item(i);
+                        org.w3c.dom.NodeList children = liability.getChildNodes();
+                        for (int j = 0; j < children.getLength(); j++) {
+                            if ("monthlyPayment".equals(children.item(j).getLocalName())) {
+                                monthlyDebt += Double.parseDouble(children.item(j).getTextContent());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // No liabilities or error parsing
+                }
+
+                double loanAmount = ((Number)getVariableData("loanData", "/types:loanRequest/types:loanAmount")).doubleValue();
+                double propertyValue = ((Number)getVariableData("inputVariable", "borrowerApplication", "/types:BorrowerApplicationType/types:property/types:estimatedValue")).doubleValue();
+
+                // Calculate ratios
+                double dti = calculator.calculateDTI(monthlyIncome, monthlyDebt);
+                double ltv = calculator.calculateLTV(loanAmount, propertyValue);
+                double piti = calculator.calculatePITI(loanAmount, monthlyIncome);
+                double frontEndDti = calculator.calculateFrontEndDTI(monthlyIncome, loanAmount * 0.005);
+                double backEndDti = calculator.calculateBackEndDTI(monthlyIncome, loanAmount * 0.005, monthlyDebt);
+                boolean isQMCompliant = calculator.isQMCompliant(backEndDti);
+
+                // Set output variables
+                setVariableData("ratiosOutput", "/types:RatioOutputType/types:dti", dti);
+                setVariableData("ratiosOutput", "/types:RatioOutputType/types:ltv", ltv);
+                setVariableData("ratiosOutput", "/types:RatioOutputType/types:piti", piti);
+                setVariableData("ratiosOutput", "/types:RatioOutputType/types:frontEndDti", frontEndDti);
+                setVariableData("ratiosOutput", "/types:RatioOutputType/types:backEndDti", backEndDti);
+                setVariableData("ratiosOutput", "/types:RatioOutputType/types:isQMCompliant", isQMCompliant);
+
+                addAuditTrailEntry("DTI Calculation Complete - DTI: " + dti + "%, LTV: " + ltv + "%, QM Compliant: " + isQMCompliant);
+            ]]>
+        </bpelx:exec>
+
+        <!-- ============================================================== -->
+        <!-- Invoke Pass-through Service to save borrower in Gold Field     -->
+        <!-- ============================================================== -->
+
+        <scope name="SaveBorrowerScope">
+            <faultHandlers>
+                <catch faultName="bpelx:remoteFault">
+                    <assign name="HandleRemoteFault">
+                        <copy>
+                            <from>'PASSTHROUGH_ERROR'</from>
+                            <to variable="kycResult"/>
+                        </copy>
+                    </assign>
+                </catch>
+            </faultHandlers>
+
+            <invoke name="InvokePassthroughService"
+                    partnerLink="PassthroughService"
+                    operation="createBorrower"
+                    inputVariable="inputVariable"/>
+        </scope>
+
+        <!-- ============================================================== -->
+        <!-- Invoke KYC Service for Identity Verification                   -->
+        <!-- ============================================================== -->
+
+        <scope name="KYCVerificationScope">
+            <faultHandlers>
+                <catch faultName="bpelx:remoteFault">
+                    <assign name="HandleKYCFault">
+                        <copy>
+                            <from>'KYC_PENDING'</from>
+                            <to variable="kycResult"/>
+                        </copy>
+                    </assign>
+                </catch>
+            </faultHandlers>
+
+            <invoke name="InvokeKYCService"
+                    partnerLink="KYCService"
+                    operation="verifyIdentity"
+                    inputVariable="inputVariable"/>
+
+            <assign name="SetKYCSuccess">
+                <copy>
+                    <from>'KYC_VERIFIED'</from>
+                    <to variable="kycResult"/>
+                </copy>
+            </assign>
+        </scope>
+
+        <!-- ============================================================== -->
+        <!-- Prepare Response                                               -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareResponse">
+            <copy>
+                <from variable="loanId"/>
+                <to>$outputVariable.applicationResult/types:loanId</to>
+            </copy>
+            <copy>
+                <from>concat('LW-', substring($loanId, 1, 8))</from>
+                <to>$outputVariable.applicationResult/types:loanNumber</to>
+            </copy>
+            <copy>
+                <from>'SUBMITTED'</from>
+                <to>$outputVariable.applicationResult/types:status</to>
+            </copy>
+            <copy>
+                <from>concat('Application submitted successfully. KYC Status: ', $kycResult)</from>
+                <to>$outputVariable.applicationResult/types:message</to>
+            </copy>
+            <copy>
+                <from>ora:getCurrentDateTime()</from>
+                <to>$outputVariable.applicationResult/types:submittedDate</to>
+            </copy>
+        </assign>
+
+        <!-- Reply to client -->
+        <reply name="ReplyToClient"
+               partnerLink="BorrowerIntakeClient"
+               operation="submitBorrowerApplication"
+               variable="outputVariable"/>
+
+    </sequence>
+
+</process>

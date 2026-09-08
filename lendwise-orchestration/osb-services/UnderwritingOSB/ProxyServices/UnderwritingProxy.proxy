@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ser:xml-service-description xmlns:ser="http://www.bea.com/wli/sb/services">
+    <ser:coreEntry>
+        <ser:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <con:binding>
+                <con:name>UnderwritingSOAPBinding</con:name>
+                <con:namespace>http://lendwise.com/soa/underwriting</con:namespace>
+            </con:binding>
+        </ser:binding>
+        <ser:pipeline ref="UnderwritingOSB/Pipelines/UnderwritingPipeline"/>
+    </ser:coreEntry>
+    <ser:endpointConfig>
+        <tran:provider-id xmlns:tran="http://www.bea.com/wli/sb/transports">http</tran:provider-id>
+        <tran:inbound xmlns:tran="http://www.bea.com/wli/sb/transports">true</tran:inbound>
+        <tran:URI xmlns:tran="http://www.bea.com/wli/sb/transports">
+            <env:value xmlns:env="http://www.bea.com/wli/config/env">/osb/UnderwritingProxy</env:value>
+        </tran:URI>
+    </ser:endpointConfig>
+</ser:xml-service-description>

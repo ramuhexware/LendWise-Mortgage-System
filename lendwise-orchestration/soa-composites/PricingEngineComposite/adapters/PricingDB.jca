@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adapter-config name="PricingDB"
+                adapter="db"
+                wsdlLocation="PricingDB.wsdl"
+                xmlns="http://platform.integration.oracle/blocks/adapter/fw/metadata">
+
+    <!-- ================================================================== -->
+    <!-- Database Adapter - Pricing and Rate Locks                          -->
+    <!-- Provides operations for rate_locks, pricing_scenarios tables       -->
+    <!-- ================================================================== -->
+
+    <connection-factory location="eis/DB/LendWiseDS"
+                        UIConnectionName="LendWiseDS"
+                        adapterRef=""/>
+
+    <!-- Insert Rate Lock -->
+    <endpoint-interaction portType="PricingDB_ptt" operation="insertRateLock">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="PricingDB.RateLock"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="PricingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Update Rate Lock -->
+    <endpoint-interaction portType="PricingDB_ptt" operation="updateRateLock">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="PricingDB.RateLock"/>
+            <property name="DmlType" value="UPDATE"/>
+            <property name="MappingsMetaDataURL" value="PricingDB-or-mappings.xml"/>
+            <property name="DetectOmissions" value="true"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Select Rate Lock by Loan -->
+    <endpoint-interaction portType="PricingDB_ptt" operation="selectRateLockByLoan">
+        <interaction-spec className="oracle.tip.adapter.db.DBReadInteractionSpec">
+            <property name="DescriptorName" value="PricingDB.RateLock"/>
+            <property name="QueryObjectName" value="selectByLoanId"/>
+            <property name="MappingsMetaDataURL" value="PricingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Insert Pricing Scenario -->
+    <endpoint-interaction portType="PricingDB_ptt" operation="insertPricingScenario">
+        <interaction-spec className="oracle.tip.adapter.db.DBWriteInteractionSpec">
+            <property name="DescriptorName" value="PricingDB.PricingScenario"/>
+            <property name="DmlType" value="INSERT"/>
+            <property name="MappingsMetaDataURL" value="PricingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Select Current Base Rates -->
+    <endpoint-interaction portType="PricingDB_ptt" operation="selectCurrentBaseRates">
+        <interaction-spec className="oracle.tip.adapter.db.DBReadInteractionSpec">
+            <property name="DescriptorName" value="PricingDB.BaseRate"/>
+            <property name="QueryObjectName" value="selectCurrentRates"/>
+            <property name="MappingsMetaDataURL" value="PricingDB-or-mappings.xml"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+    <!-- Stored Procedure: Calculate LLPA -->
+    <endpoint-interaction portType="PricingDB_ptt" operation="calculateLLPA">
+        <interaction-spec className="oracle.tip.adapter.db.DBStoredProcedureInteractionSpec">
+            <property name="SchemaName" value="LENDWISE"/>
+            <property name="PackageName" value="PRICING_PKG"/>
+            <property name="ProcedureName" value="CALCULATE_LLPA"/>
+            <property name="GetActiveUnitOfWork" value="false"/>
+        </interaction-spec>
+    </endpoint-interaction>
+
+</adapter-config>

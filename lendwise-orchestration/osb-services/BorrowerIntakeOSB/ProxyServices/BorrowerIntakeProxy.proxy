@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ser:xml-service-description xmlns:ser="http://www.bea.com/wli/sb/services">
+    <ser:coreEntry>
+        <ser:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <con:wsdl ref="BorrowerIntakeOSB/WSDL/BorrowerIntakeOSBService"/>
+            <con:binding>
+                <con:name>BorrowerIntakeBinding</con:name>
+                <con:namespace>http://lendwise.com/soa/borrower</con:namespace>
+            </con:binding>
+        </ser:binding>
+        <ser:pipeline ref="BorrowerIntakeOSB/Pipelines/BorrowerIntakePipeline"/>
+        <ser:pageFlow-support>
+            <ser:pageFlow-allocation-style>abstract-for-all</ser:pageFlow-allocation-style>
+        </ser:pageFlow-support>
+    </ser:coreEntry>
+    <ser:endpointConfig>
+        <tran:provider-id xmlns:tran="http://www.bea.com/wli/sb/transports">http</tran:provider-id>
+        <tran:inbound xmlns:tran="http://www.bea.com/wli/sb/transports">true</tran:inbound>
+        <tran:URI xmlns:tran="http://www.bea.com/wli/sb/transports">
+            <env:value xmlns:env="http://www.bea.com/wli/config/env">/osb/BorrowerIntakeProxy</env:value>
+        </tran:URI>
+        <tran:inbound-properties xmlns:tran="http://www.bea.com/wli/sb/transports"/>
+        <tran:provider-specific xsi:type="http:HttpEndPointConfiguration" xmlns:http="http://www.bea.com/wli/sb/transports/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <http:inbound-properties/>
+            <http:compression>
+                <http:compression-support>false</http:compression-support>
+            </http:compression>
+        </tran:provider-specific>
+    </ser:endpointConfig>
+</ser:xml-service-description>

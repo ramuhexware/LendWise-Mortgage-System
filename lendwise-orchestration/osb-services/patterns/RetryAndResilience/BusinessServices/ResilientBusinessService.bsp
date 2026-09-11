@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ser:businessServiceEntry xmlns:ser="http://www.bea.com/wli/sb/services"
+                          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                          xmlns:tran="http://www.bea.com/wli/sb/transports"
+                          xmlns:env="http://www.bea.com/wli/config/env"
+                          xmlns:http="http://www.bea.com/wli/sb/transports/http">
+    <ser:coreEntry>
+        <ser:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
+            <con:binding>
+                <con:name>PricingBinding</con:name>
+                <con:namespace>http://lendwise.com/soa/pricing</con:namespace>
+            </con:binding>
+        </ser:binding>
+    </ser:coreEntry>
+    <ser:endpointConfig>
+        <tran:provider-id>http</tran:provider-id>
+        <tran:inbound>false</tran:inbound>
+        <!-- Primary, Secondary (Failover), and Tertiary Endpoint URIs -->
+        <tran:URI>
+            <env:value>http://primary-soa-cluster:7001/soa-infra/services/default/PricingEngineComposite/PricingService</env:value>
+        </tran:URI>
+        <tran:URI>
+            <env:value>http://secondary-soa-cluster:7001/soa-infra/services/default/PricingEngineComposite/PricingService</env:value>
+        </tran:URI>
+        <tran:URI>
+            <env:value>http://dr-soa-cluster:7001/soa-infra/services/default/PricingEngineComposite/PricingService</env:value>
+        </tran:URI>
+        <tran:outbound-properties>
+            <tran:load-balancing-algorithm>round-robin</tran:load-balancing-algorithm>
+            <!-- Automatic OSB Transport Retry Configuration -->
+            <tran:retry-count>3</tran:retry-count>
+            <tran:retry-interval>5</tran:retry-interval>
+            <tran:retry-application-errors>true</tran:retry-application-errors>
+        </tran:outbound-properties>
+        <tran:provider-specific xsi:type="http:HttpEndPointConfiguration">
+            <http:outbound-properties>
+                <http:request-method>POST</http:request-method>
+                <http:connection-timeout>10</http:connection-timeout>
+                <http:read-timeout>30</http:read-timeout>
+                <http:follow-redirects>false</http:follow-redirects>
+            </http:outbound-properties>
+        </tran:provider-specific>
+    </ser:endpointConfig>
+</ser:businessServiceEntry>

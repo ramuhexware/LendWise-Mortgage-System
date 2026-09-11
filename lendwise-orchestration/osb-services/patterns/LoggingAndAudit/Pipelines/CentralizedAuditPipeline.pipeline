@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config"
+                  xmlns:con4="http://www.bea.com/wli/sb/stages/publish/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="AuditRequestPipeline">
+            <con:stage name="ExtractOrGenerateCorrelationID">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="correlationId">
+                        <con2:id>id_audit_corr</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>if (fn:exists($inbound/ctx:transport/ctx:request/tp:headers/tp:user-header[@name='X-Correlation-ID']/@value)) then $inbound/ctx:transport/ctx:request/tp:headers/tp:user-header[@name='X-Correlation-ID']/@value else fn-bea:uuid()</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <con3:assign varName="trackingId">
+                        <con2:id>id_audit_track</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>fn-bea:uuid()</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <!-- Transport Header Enrichment -->
+                    <con3:transport-headers copy-all="true">
+                        <con2:id>id_audit_headers</con2:id>
+                        <con3:header-set>outbound-request</con3:header-set>
+                        <con3:header name="X-Correlation-ID" value="expression">
+                            <con2:xqueryText>$correlationId</con2:xqueryText>
+                        </con3:header>
+                        <con3:header name="X-Tracking-ID" value="expression">
+                            <con2:xqueryText>$trackingId</con2:xqueryText>
+                        </con3:header>
+                    </con3:transport-headers>
+                    <!-- Structured Log Action -->
+                    <con2:log>
+                        <con2:id>id_audit_log_req</con2:id>
+                        <con2:logLevel>info</con2:logLevel>
+                        <con2:expr>
+                            <con2:xqueryText>concat("[OSB AUDIT INBOUND] CorrelationID=", $correlationId, " TrackingID=", $trackingId, " Service=", $inbound/ctx:service/ctx:name/text(), " Payload=", fn-bea:serialize($body))</con2:xqueryText>
+                        </con2:expr>
+                        <con2:message>LendWise Pipeline Audit Request Log</con2:message>
+                    </con2:log>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="response" name="AuditResponsePipeline">
+            <con:stage name="LogOutboundResponse">
+                <con:context/>
+                <con:actions>
+                    <con2:log>
+                        <con2:id>id_audit_log_resp</con2:id>
+                        <con2:logLevel>info</con2:logLevel>
+                        <con2:expr>
+                            <con2:xqueryText>concat("[OSB AUDIT OUTBOUND] CorrelationID=", $correlationId, " TrackingID=", $trackingId, " Status=SUCCESS Payload=", fn-bea:serialize($body))</con2:xqueryText>
+                        </con2:expr>
+                        <con2:message>LendWise Pipeline Audit Response Log</con2:message>
+                    </con2:log>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="CentralizedAuditNode">
+                <con:request>AuditRequestPipeline</con:request>
+                <con:response>AuditResponsePipeline</con:response>
+            </con:pipeline-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

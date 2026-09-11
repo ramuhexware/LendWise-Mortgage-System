@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="ResilienceRequestPipeline">
+            <con:stage name="InvokeWithResilience" errorHandler="StageRetryFallbackHandler">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="loanId">
+                        <con2:id>id_resil_01</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>$body//LoanId/text()</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="response" name="ResilienceResponsePipeline">
+            <con:stage name="ProcessResponse">
+                <con:context/>
+                <con:actions/>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="error" name="StageRetryFallbackHandler">
+            <con:stage name="GenerateGracefulFallback">
+                <con:context/>
+                <con:actions>
+                    <con2:log>
+                        <con2:id>id_log_resil_fail</con2:id>
+                        <con2:logLevel>warning</con2:logLevel>
+                        <con2:expr>
+                            <con2:xqueryText>concat("[RESILIENCE FALLBACK ACTIVATED] Target service failed. ErrorCode=", $fault/ctx:errorCode/text(), " Reason=", $fault/ctx:reason/text())</con2:xqueryText>
+                        </con2:expr>
+                        <con2:message>Pricing Service Circuit Breaker / Fallback Engaged</con2:message>
+                    </con2:log>
+                    <con3:assign varName="fallbackQuote">
+                        <con2:id>id_assign_fallback</con2:id>
+                        <con3:expr>
+                            <con2:xqueryTransform>
+                                <con2:resource ref="patterns/RetryAndResilience/Transformations/GenerateFallbackResponse"/>
+                                <con2:param name="errorMessage">
+                                    <con2:path>string($fault/ctx:reason/text())</con2:path>
+                                </con2:param>
+                                <con2:param name="loanId">
+                                    <con2:path>$loanId</con2:path>
+                                </con2:param>
+                            </con2:xqueryTransform>
+                        </con3:expr>
+                    </con3:assign>
+                    <con3:replace varName="body" contents-only="true">
+                        <con2:id>id_replace_fallback</con2:id>
+                        <con3:location>
+                            <con2:xpathText>.</con2:xpathText>
+                        </con3:location>
+                        <con3:expr>
+                            <con2:xqueryText>$fallbackQuote</con2:xqueryText>
+                        </con3:expr>
+                    </con3:replace>
+                    <con2:resume>
+                        <con2:id>id_resume_flow</con2:id>
+                    </con2:resume>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="ResilientPipelineNode">
+                <con:request>ResilienceRequestPipeline</con:request>
+                <con:response>ResilienceResponsePipeline</con:response>
+            </con:pipeline-node>
+            <con:route-node name="RouteToResilientBS">
+                <con:actions>
+                    <con1:route>
+                        <con2:id>id_resil_route</con2:id>
+                        <con1:service ref="patterns/RetryAndResilience/BusinessServices/ResilientBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con1:operation-discover>true</con1:operation-discover>
+                    </con1:route>
+                </con:actions>
+            </con:route-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

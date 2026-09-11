@@ -34,6 +34,8 @@
                     <include>**/*.wsdl</include>
                     <include>**/*.xsd</include>
                     <include>**/*.xq</include>
+                    <include>**/*.xqy</include>
+                    <include>**/*.xsl</include>
                 </includes>
                 <excludes>
                     <exclude>target/**</exclude>

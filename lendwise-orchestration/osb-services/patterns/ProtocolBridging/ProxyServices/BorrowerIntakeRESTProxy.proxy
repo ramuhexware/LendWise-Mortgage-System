@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ser:xml-service-description xmlns:ser="http://www.bea.com/wli/sb/services"
+                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                             xmlns:tran="http://www.bea.com/wli/sb/transports"
+                             xmlns:env="http://www.bea.com/wli/config/env">
+    <ser:coreEntry>
+        <ser:binding type="REST" xsi:type="con:RestBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
+            <con:rest-descriptor>
+                <con:resource path="/api/v1/borrowers" name="BorrowerResource">
+                    <con:method name="POST" id="createBorrower">
+                        <con:request>
+                            <con:payload type="JSON"/>
+                        </con:request>
+                        <con:response>
+                            <con:payload type="JSON"/>
+                        </con:response>
+                    </con:method>
+                </con:resource>
+            </con:rest-descriptor>
+        </ser:binding>
+        <ser:pipeline ref="BorrowerIntakeOSB/Pipelines/BorrowerIntakePipeline"/>
+    </ser:coreEntry>
+    <ser:endpointConfig>
+        <tran:provider-id>http</tran:provider-id>
+        <tran:inbound>true</tran:inbound>
+        <tran:URI>
+            <env:value>/rest/BorrowerIntakeAPI</env:value>
+        </tran:URI>
+        <tran:provider-specific xsi:type="http:HttpEndPointConfiguration" xmlns:http="http://www.bea.com/wli/sb/transports/http">
+            <http:inbound-properties/>
+        </tran:provider-specific>
+    </ser:endpointConfig>
+</ser:xml-service-description>

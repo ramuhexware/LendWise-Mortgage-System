@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ser:xml-service-description xmlns:ser="http://www.bea.com/wli/sb/services"
+                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                             xmlns:tran="http://www.bea.com/wli/sb/transports"
+                             xmlns:env="http://www.bea.com/wli/config/env"
+                             xmlns:file="http://www.bea.com/wli/sb/transports/file">
+    <ser:coreEntry>
+        <ser:binding type="Mixed" isSOAP12="false" xsi:type="con:MixedBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
+            <con:request type="Binary"/>
+            <con:response type="None"/>
+        </ser:binding>
+        <ser:pipeline ref="DocumentProcessingOSB/Pipelines/DocumentProcessingPipeline"/>
+    </ser:coreEntry>
+    <ser:endpointConfig>
+        <tran:provider-id>file</tran:provider-id>
+        <tran:inbound>true</tran:inbound>
+        <tran:URI>
+            <env:value>file:///opt/lendwise/incoming_docs</env:value>
+        </tran:URI>
+        <tran:provider-specific xsi:type="file:FileEndPointConfiguration">
+            <file:polling-interval>10</file:polling-interval>
+            <file:file-mask>*.pdf,*.xml,*.tif</file:file-mask>
+            <file:read-limit>100</file:read-limit>
+            <file:post-process-action>archive</file:post-process-action>
+            <file:archive-directory>/opt/lendwise/archive</file:archive-directory>
+        </tran:provider-specific>
+    </ser:endpointConfig>
+</ser:xml-service-description>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="AggregationRequestPipeline">
+            <con:stage name="ScatterGatherServiceCalls">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="loanId">
+                        <con2:id>id_agg_01</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>$body//LoanId/text()</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <!-- Call 1: Credit Bureau Service -->
+                    <con3:wsCallout>
+                        <con2:id>id_callout_credit</con2:id>
+                        <con3:service ref="patterns/ServiceVirtualization/BusinessServices/MockCreditBureauBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con3:requestTransform/>
+                        <con3:responseTransform>
+                            <con3:assign varName="creditResponse">
+                                <con2:id>id_assign_credit</con2:id>
+                                <con3:expr>
+                                    <con2:xqueryText>$body</con2:xqueryText>
+                                </con3:expr>
+                            </con3:assign>
+                        </con3:responseTransform>
+                    </con3:wsCallout>
+                    <!-- Call 2: Decision Engine Service -->
+                    <con3:wsCallout>
+                        <con2:id>id_callout_decision</con2:id>
+                        <con3:service ref="UnderwritingOSB/BusinessServices/UnderwritingSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con3:requestTransform/>
+                        <con3:responseTransform>
+                            <con3:assign varName="decisionResponse">
+                                <con2:id>id_assign_decision</con2:id>
+                                <con3:expr>
+                                    <con2:xqueryText>$body</con2:xqueryText>
+                                </con3:expr>
+                            </con3:assign>
+                        </con3:responseTransform>
+                    </con3:wsCallout>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="response" name="AggregationResponsePipeline">
+            <con:stage name="MergeAndAggregateResults">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="aggregatedPayload">
+                        <con2:id>id_agg_merge</con2:id>
+                        <con3:expr>
+                            <con2:xqueryTransform>
+                                <con2:resource ref="patterns/ServiceAggregation/Transformations/AggregateUnderwritingResults"/>
+                                <con2:param name="creditResp">
+                                    <con2:path>$creditResponse</con2:path>
+                                </con2:param>
+                                <con2:param name="dtiResp">
+                                    <con2:path>$decisionResponse</con2:path>
+                                </con2:param>
+                                <con2:param name="decisionResp">
+                                    <con2:path>$decisionResponse</con2:path>
+                                </con2:param>
+                                <con2:param name="loanId">
+                                    <con2:path>$loanId</con2:path>
+                                </con2:param>
+                            </con2:xqueryTransform>
+                        </con3:expr>
+                    </con3:assign>
+                    <con3:replace varName="body" contents-only="true">
+                        <con2:id>id_agg_replace</con2:id>
+                        <con3:location>
+                            <con2:xpathText>.</con2:xpathText>
+                        </con3:location>
+                        <con3:expr>
+                            <con2:xqueryText>$aggregatedPayload</con2:xqueryText>
+                        </con3:expr>
+                    </con3:replace>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="ScatterGatherAggregationNode">
+                <con:request>AggregationRequestPipeline</con:request>
+                <con:response>AggregationResponsePipeline</con:response>
+            </con:pipeline-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="ContentRoutingRequestPipeline">
+            <con:stage name="EvaluatePayload">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="loanType">
+                        <con2:id>id_cbr_01</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>$body//LoanType/text()</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <con3:assign varName="loanAmount">
+                        <con2:id>id_cbr_02</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>xs:decimal($body//LoanAmount/text())</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="response" name="ContentRoutingResponsePipeline">
+            <con:stage name="LogResult">
+                <con:context/>
+                <con:actions/>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="CBRNode">
+                <con:request>ContentRoutingRequestPipeline</con:request>
+                <con:response>ContentRoutingResponsePipeline</con:response>
+            </con:pipeline-node>
+            <con:branch-node type="condition" name="LoanRoutingBranchNode">
+                <con:context/>
+                <con:branch-table variable="loanType">
+                    <con:xpath>
+                        <con2:xpathText>.</con2:xpathText>
+                    </con:xpath>
+                    <con:branch name="FHA_BRANCH">
+                        <con:operator>equals</con:operator>
+                        <con:value>"FHA"</con:value>
+                        <con:flow>
+                            <con:route-node name="RouteToFHA">
+                                <con:actions>
+                                    <con1:route>
+                                        <con2:id>id_cbr_fha</con2:id>
+                                        <con1:service ref="patterns/ContentBasedRouting/BusinessServices/FHAUnderwritingBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                                        <con1:operation-discover>true</con1:operation-discover>
+                                    </con1:route>
+                                </con:actions>
+                            </con:route-node>
+                        </con:flow>
+                    </con:branch>
+                    <con:branch name="JUMBO_BRANCH">
+                        <con:operator>equals</con:operator>
+                        <con:value>"JUMBO"</con:value>
+                        <con:flow>
+                            <con:route-node name="RouteToJumbo">
+                                <con:actions>
+                                    <con1:route>
+                                        <con2:id>id_cbr_jumbo</con2:id>
+                                        <con1:service ref="patterns/ContentBasedRouting/BusinessServices/JumboUnderwritingBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                                        <con1:operation-discover>true</con1:operation-discover>
+                                    </con1:route>
+                                </con:actions>
+                            </con:route-node>
+                        </con:flow>
+                    </con:branch>
+                    <con:default-branch>
+                        <con:flow>
+                            <con:route-node name="RouteToConformingStandard">
+                                <con:actions>
+                                    <con1:route>
+                                        <con2:id>id_cbr_std</con2:id>
+                                        <con1:service ref="UnderwritingOSB/BusinessServices/UnderwritingSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                                        <con1:operation-discover>true</con1:operation-discover>
+                                    </con1:route>
+                                </con:actions>
+                            </con:route-node>
+                        </con:flow>
+                    </con:default-branch>
+                </con:branch-table>
+            </con:branch-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

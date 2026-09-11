@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config"
+                  xmlns:con4="http://www.bea.com/wli/sb/stages/publish/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="AsyncDocRequestPipeline">
+            <con:stage name="GenerateAsyncTokenAndEnqueue">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="trackingToken">
+                        <con2:id>id_async_01</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>concat("ASYNC-DOC-", fn-bea:uuid())</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <!-- Publish request to background processing queue -->
+                    <con3:publish>
+                        <con2:id>id_async_enqueue</con2:id>
+                        <con3:service ref="patterns/ProtocolBridging/ProxyServices/JMSDocumentIngestProxy" xsi:type="ref:ProxyServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                    </con3:publish>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="response" name="AsyncDocResponsePipeline">
+            <con:stage name="ReturnHttp202Accepted">
+                <con:context/>
+                <con:actions>
+                    <con3:assign varName="acceptedResponse">
+                        <con2:id>id_async_resp</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>
+                                <AsyncProcessingAck xmlns="http://lendwise.com/async/doc">
+                                    <Status>ACCEPTED</Status>
+                                    <StatusCode>202</StatusCode>
+                                    <TrackingToken>{ $trackingToken }</TrackingToken>
+                                    <Message>Document submission received and queued for asynchronous processing.</Message>
+                                    <Timestamp>{ fn:current-dateTime() }</Timestamp>
+                                </AsyncProcessingAck>
+                            </con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <con3:replace varName="body" contents-only="true">
+                        <con2:id>id_async_body</con2:id>
+                        <con3:location>
+                            <con2:xpathText>.</con2:xpathText>
+                        </con3:location>
+                        <con3:expr>
+                            <con2:xqueryText>$acceptedResponse</con2:xqueryText>
+                        </con3:expr>
+                    </con3:replace>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="AsyncRequestReplyNode">
+                <con:request>AsyncDocRequestPipeline</con:request>
+                <con:response>AsyncDocResponsePipeline</con:response>
+            </con:pipeline-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

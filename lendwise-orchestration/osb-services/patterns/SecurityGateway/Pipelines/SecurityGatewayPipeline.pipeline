@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config">
+    <con:coreEntry>
+        <con:binding type="AnyXML"/>
+    </con:coreEntry>
+    <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="SecurityGatewayRequestPipeline">
+            <con:stage name="AuthenticateAndAuthorize">
+                <con:context/>
+                <con:actions>
+                    <!-- Extract Authorization Header & API Key -->
+                    <con3:assign varName="authHeader">
+                        <con2:id>id_sec_01</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>$inbound/ctx:transport/ctx:request/tp:headers/tp:user-header[@name='Authorization']/@value</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <con3:assign varName="apiKey">
+                        <con2:id>id_sec_02</con2:id>
+                        <con3:expr>
+                            <con2:xqueryText>$inbound/ctx:transport/ctx:request/tp:headers/tp:user-header[@name='X-API-Key']/@value</con2:xqueryText>
+                        </con3:expr>
+                    </con3:assign>
+                    <!-- Validate Authorization Header Presence -->
+                    <con3:ifThenElse>
+                        <con2:id>id_sec_if_auth</con2:id>
+                        <con3:case>
+                            <con3:condition>
+                                <con2:xqueryText>fn:empty($authHeader) or not(fn:starts-with($authHeader, "Bearer "))</con2:xqueryText>
+                            </con3:condition>
+                            <con3:actions>
+                                <con3:Error>
+                                    <con2:id>id_err_unauth</con2:id>
+                                    <con3:errCode>OSB-401</con3:errCode>
+                                    <con3:message>Unauthorized: Missing or invalid JWT Bearer token in Authorization header.</con3:message>
+                                </con3:Error>
+                            </con3:actions>
+                        </con3:case>
+                    </con3:ifThenElse>
+                    <!-- Validate API Key -->
+                    <con3:ifThenElse>
+                        <con2:id>id_sec_if_apikey</con2:id>
+                        <con3:case>
+                            <con3:condition>
+                                <con2:xqueryText>fn:empty($apiKey) or $apiKey != "LENDWISE-SECRET-API-KEY-2026"</con2:xqueryText>
+                            </con3:condition>
+                            <con3:actions>
+                                <con3:Error>
+                                    <con2:id>id_err_forbidden</con2:id>
+                                    <con3:errCode>OSB-403</con3:errCode>
+                                    <con3:message>Forbidden: Invalid X-API-Key client credential.</con3:message>
+                                </con3:Error>
+                            </con3:actions>
+                        </con3:case>
+                    </con3:ifThenElse>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+        <con:pipeline type="response" name="SecurityGatewayResponsePipeline">
+            <con:stage name="SanitizeResponseHeaders">
+                <con:context/>
+                <con:actions/>
+            </con:stage>
+        </con:pipeline>
+        <con:flow>
+            <con:pipeline-node name="SecurityGatewayNode">
+                <con:request>SecurityGatewayRequestPipeline</con:request>
+                <con:response>SecurityGatewayResponsePipeline</con:response>
+            </con:pipeline-node>
+            <con:route-node name="RouteToProtectedService">
+                <con:actions>
+                    <con1:route>
+                        <con2:id>id_sec_route</con2:id>
+                        <con1:service ref="UnderwritingOSB/BusinessServices/UnderwritingSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con1:operation-discover>true</con1:operation-discover>
+                    </con1:route>
+                </con:actions>
+            </con:route-node>
+        </con:flow>
+    </con:router>
+</con:pipelineEntry>

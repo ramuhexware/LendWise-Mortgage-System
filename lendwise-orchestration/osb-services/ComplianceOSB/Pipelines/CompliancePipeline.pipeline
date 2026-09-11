@@ -2,7 +2,9 @@
 <con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
-                  xmlns:con2="http://www.bea.com/wli/sb/stages/config">
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config"
+                  xmlns:con4="http://www.bea.com/wli/sb/stages/publish/config">
     <con:coreEntry>
         <con:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
             <con:binding>
@@ -12,12 +14,45 @@
         </con:binding>
     </con:coreEntry>
     <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="ComplianceRequestPipeline">
+            <!-- Stage 1: DB Audit Log via DbAdapter -->
+            <con:stage name="AuditDB_Publish">
+                <con:context/>
+                <con:actions>
+                    <con4:route>
+                        <con2:id>id_comp_db_01</con2:id>
+                        <con4:service ref="common/BusinessServices/AuditDBBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>insertAuditLog</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+
+        <con:pipeline type="response" name="ComplianceResponsePipeline">
+            <con:stage name="JMSNotification_Publish">
+                <con:context/>
+                <con:actions>
+                    <con4:route>
+                        <con2:id>id_comp_jms_01</con2:id>
+                        <con4:service ref="common/BusinessServices/JMSNotificationBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>Produce</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+
         <con:flow>
+            <con:pipeline-node name="CompliancePipelineNode">
+                <con:request>ComplianceRequestPipeline</con:request>
+                <con:response>ComplianceResponsePipeline</con:response>
+            </con:pipeline-node>
             <con:route-node name="RouteToComplianceComposite">
                 <con:context/>
                 <con:actions>
                     <con1:route>
-                        <con2:id>id_compliance_route_01</con2:id>
+                        <con2:id>id_comp_route_01</con2:id>
                         <con1:service ref="ComplianceOSB/BusinessServices/ComplianceSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
                         <con1:operation-discover>true</con1:operation-discover>
                     </con1:route>

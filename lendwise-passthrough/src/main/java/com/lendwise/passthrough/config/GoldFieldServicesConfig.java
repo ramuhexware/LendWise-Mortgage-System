@@ -14,11 +14,17 @@ import org.springframework.context.annotation.Configuration;
 public class GoldFieldServicesConfig {
 
     private String borrowerService;
+    private String kycService;
     private String documentService;
+    private String creditService;
     private String underwritingService;
     private String complianceService;
     private String pricingService;
+    private String ratelockService;
+    private String amortizationService;
     private String closingService;
+    private String esignService;
+    private String fundingService;
     private String notificationService;
     private String valuationService;
     private String titleService;

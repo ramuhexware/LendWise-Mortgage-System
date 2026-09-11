@@ -9,7 +9,10 @@
          xmlns:tns="http://lendwise.com/soa/borrower/bpel"
          xmlns:borrower="http://lendwise.com/soa/borrower"
          xmlns:types="http://lendwise.com/soa/borrower/types"
-         xmlns:passthrough="http://lendwise.com/soa/passthrough">
+         xmlns:passthrough="http://lendwise.com/soa/passthrough"
+         xmlns:db="http://lendwise.com/soa/adapter/db"
+         xmlns:file="http://lendwise.com/soa/adapter/file"
+         xmlns:jms="http://lendwise.com/soa/adapter/jms">
 
     <!-- ================================================================== -->
     <!-- Partner Links                                                      -->
@@ -30,6 +33,21 @@
         <partnerLink name="KYCService"
                      partnerLinkType="passthrough:PassthroughPLT"
                      partnerRole="PassthroughProvider"/>
+
+        <!-- Database Adapter (DbAdapter) for Oracle DB Persistence -->
+        <partnerLink name="BorrowerIntakeDB"
+                     partnerLinkType="db:BorrowerIntakeDBPLT"
+                     partnerRole="DatabaseProvider"/>
+
+        <!-- Outbound File Adapter for Document/Payload Archiving -->
+        <partnerLink name="FileAdapterOutbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     partnerRole="FileWriter"/>
+
+        <!-- Outbound JMS Queue Publisher -->
+        <partnerLink name="NotificationQueue"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     partnerRole="JMSProducer"/>
     </partnerLinks>
 
     <!-- ================================================================== -->
@@ -55,6 +73,10 @@
         <variable name="ratiosOutput" element="types:RatioOutputType"/>
         <variable name="kycResult" type="xsd:string"/>
         <variable name="loanId" type="xsd:string"/>
+
+        <!-- DbAdapter, FileAdapter and JMS Variables -->
+        <variable name="dbInsertRequest" messageType="db:LoanApplicationCollection"/>
+        <variable name="notificationMessage" messageType="jms:NotificationMessage"/>
 
         <!-- Fault Variable -->
         <variable name="faultVariable" messageType="borrower:BorrowerFault"/>
@@ -220,6 +242,79 @@
                 </copy>
             </assign>
         </scope>
+
+        <!-- ============================================================== -->
+        <!-- DbAdapter: Persist Loan Application to Oracle DB              -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareDBInsert">
+            <copy>
+                <from variable="loanId"/>
+                <to>$dbInsertRequest.LoanApplicationCollection/db:LoanApplication/db:loanId</to>
+            </copy>
+            <copy>
+                <from>$borrowerData/types:personalInfo/types:firstName</from>
+                <to>$dbInsertRequest.LoanApplicationCollection/db:LoanApplication/db:borrowerFirstName</to>
+            </copy>
+            <copy>
+                <from>$borrowerData/types:personalInfo/types:lastName</from>
+                <to>$dbInsertRequest.LoanApplicationCollection/db:LoanApplication/db:borrowerLastName</to>
+            </copy>
+            <copy>
+                <from>$loanData/types:loanAmount</from>
+                <to>$dbInsertRequest.LoanApplicationCollection/db:LoanApplication/db:loanAmount</to>
+            </copy>
+            <copy>
+                <from>'SUBMITTED'</from>
+                <to>$dbInsertRequest.LoanApplicationCollection/db:LoanApplication/db:status</to>
+            </copy>
+            <copy>
+                <from>ora:getCurrentDateTime()</from>
+                <to>$dbInsertRequest.LoanApplicationCollection/db:LoanApplication/db:submittedDate</to>
+            </copy>
+        </assign>
+
+        <invoke name="PersistLoanApplication"
+                partnerLink="BorrowerIntakeDB"
+                operation="insertLoanApplication"
+                inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- FileAdapter: Archive Submission Payload                        -->
+        <!-- ============================================================== -->
+
+        <invoke name="ArchiveSubmissionPayload"
+                partnerLink="FileAdapterOutbound"
+                operation="Write"
+                inputVariable="inputVariable"/>
+
+        <!-- ============================================================== -->
+        <!-- JMS Queue Publisher: Publish Event to jms/NotificationQueue    -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareJMSNotification">
+            <copy>
+                <from variable="loanId"/>
+                <to>$notificationMessage.notification/jms:loanId</to>
+            </copy>
+            <copy>
+                <from>$borrowerData/types:personalInfo/types:email</from>
+                <to>$notificationMessage.notification/jms:recipientEmail</to>
+            </copy>
+            <copy>
+                <from>'BORROWER_APPLICATION_SUBMITTED'</from>
+                <to>$notificationMessage.notification/jms:notificationType</to>
+            </copy>
+            <copy>
+                <from>concat('Loan Application ', $loanId, ' received successfully. KYC Status: ', $kycResult)</from>
+                <to>$notificationMessage.notification/jms:message</to>
+            </copy>
+        </assign>
+
+        <invoke name="PublishApplicationSubmittedEvent"
+                partnerLink="NotificationQueue"
+                operation="Produce"
+                inputVariable="notificationMessage"/>
 
         <!-- ============================================================== -->
         <!-- Prepare Response                                               -->

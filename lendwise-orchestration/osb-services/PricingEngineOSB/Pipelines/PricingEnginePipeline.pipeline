@@ -2,7 +2,9 @@
 <con:pipelineEntry xmlns:con="http://www.bea.com/wli/sb/pipeline/config"
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
-                  xmlns:con2="http://www.bea.com/wli/sb/stages/config">
+                  xmlns:con2="http://www.bea.com/wli/sb/stages/config"
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config"
+                  xmlns:con4="http://www.bea.com/wli/sb/stages/publish/config">
     <con:coreEntry>
         <con:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
             <con:binding>
@@ -12,13 +14,59 @@
         </con:binding>
     </con:coreEntry>
     <con:router errorHandler="common/faults/FaultHandler">
+        <con:pipeline type="request" name="PricingEngineRequestPipeline">
+            <!-- Stage 1: Java Adapter Callout (AmortizationCalculator) -->
+            <con:stage name="JavaCallout_Amortization">
+                <con:context/>
+                <con:actions>
+                    <con3:java-callout varName="monthlyPayment">
+                        <con2:id>id_pricing_java_01</con2:id>
+                        <con3:archive ref="java-adapters/amortization-calculator/target/amortization-calculator-1.0.0-SNAPSHOT.jar"/>
+                        <con3:className>com.lendwise.adapters.AmortizationCalculator</con3:className>
+                        <con3:method>public double calculateMonthlyPayment(double, double, int)</con3:method>
+                    </con3:java-callout>
+                </con:actions>
+            </con:stage>
+
+            <!-- Stage 2: File Archive via FileAdapter -->
+            <con:stage name="FileArchive_Publish">
+                <con:context/>
+                <con:actions>
+                    <con4:route>
+                        <con2:id>id_pricing_file_01</con2:id>
+                        <con4:service ref="common/BusinessServices/FileArchiveBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>Write</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+
+        <con:pipeline type="response" name="PricingEngineResponsePipeline">
+            <con:stage name="JMSNotification_Publish">
+                <con:context/>
+                <con:actions>
+                    <con4:route>
+                        <con2:id>id_pricing_jms_01</con2:id>
+                        <con4:service ref="common/BusinessServices/JMSNotificationBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>Produce</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+
         <con:flow>
+            <con:pipeline-node name="PricingEnginePipelineNode">
+                <con:request>PricingEngineRequestPipeline</con:request>
+                <con:response>PricingEngineResponsePipeline</con:response>
+            </con:pipeline-node>
             <con:route-node name="RouteToPricingComposite">
                 <con:context/>
                 <con:actions>
                     <con1:route>
                         <con2:id>id_pricing_route_01</con2:id>
-                        <con1:service ref="PricingEngineOSB/BusinessServices/PricingEngineSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con1:service ref="PricingEngineOSB/BusinessServices/PricingSOABusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
                         <con1:operation-discover>true</con1:operation-discover>
                     </con1:route>
                 </con:actions>

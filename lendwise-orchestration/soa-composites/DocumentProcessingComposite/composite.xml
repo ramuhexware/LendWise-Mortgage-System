@@ -16,6 +16,8 @@
     <!-- - Cross-data validation                                            -->
     <!-- - Missing item checklist state machine                             -->
     <!-- - File/FTP Adapter usage                                           -->
+    <!-- - Database Audit & Record Persistence (DbAdapter)                  -->
+    <!-- - JMS Event Publishing (JMS Queue Publisher)                       -->
     <!-- ================================================================== -->
 
     <!-- Import WSDLs -->
@@ -73,6 +75,12 @@
             <reference name="PassthroughDocumentService">
                 <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
             </reference>
+            <reference name="DocumentDB">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(DocumentDBPortType)"/>
+            </reference>
+            <reference name="NotificationQueue">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+            </reference>
         </componentType>
     </component>
 
@@ -92,6 +100,18 @@
         <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/documents"
                       method="POST"
                       contentType="application/json"/>
+    </reference>
+
+    <!-- DbAdapter Reference - Oracle DB Persistence -->
+    <reference name="DocumentDB">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(DocumentDBPortType)"/>
+        <binding.jca config="adapters/DocumentDB_db.jca"/>
+    </reference>
+
+    <!-- JMS Queue Publisher Reference - WebLogic JMS Event Queue -->
+    <reference name="NotificationQueue">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+        <binding.jca config="adapters/NotificationQueue_jms.jca"/>
     </reference>
 
     <!-- ================================================================== -->
@@ -117,6 +137,14 @@
     <wire>
         <source.uri>DocumentProcessingProcess/PassthroughDocumentService</source.uri>
         <target.uri>PassthroughDocumentService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>DocumentProcessingProcess/DocumentDB</source.uri>
+        <target.uri>DocumentDB</target.uri>
+    </wire>
+    <wire>
+        <source.uri>DocumentProcessingProcess/NotificationQueue</source.uri>
+        <target.uri>NotificationQueue</target.uri>
     </wire>
 
 </composite>

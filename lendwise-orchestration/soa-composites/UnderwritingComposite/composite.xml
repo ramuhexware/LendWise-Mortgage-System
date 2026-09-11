@@ -16,6 +16,8 @@
     <!-- - Credit bureau SOAP calls                                         -->
     <!-- - Decision Engine Java embedding                                   -->
     <!-- - Database Adapter for persist decisions                           -->
+    <!-- - File Adapter for underwriting report archiving                   -->
+    <!-- - JMS Queue Publisher for event publishing                        -->
     <!-- ================================================================== -->
 
     <!-- Import WSDLs -->
@@ -63,6 +65,12 @@
             <reference name="PassthroughUnderwritingService">
                 <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
             </reference>
+            <reference name="FileAdapterOutbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+            </reference>
+            <reference name="NotificationQueue">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+            </reference>
         </componentType>
     </component>
 
@@ -102,6 +110,18 @@
                       contentType="application/json"/>
     </reference>
 
+    <!-- File Adapter Outbound - Report Archiving -->
+    <reference name="FileAdapterOutbound">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+        <binding.jca config="adapters/FileAdapterOutbound_file.jca"/>
+    </reference>
+
+    <!-- JMS Queue Publisher - Event Queue -->
+    <reference name="NotificationQueue">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+        <binding.jca config="adapters/NotificationQueue_jms.jca"/>
+    </reference>
+
     <!-- ================================================================== -->
     <!-- Wiring                                                             -->
     <!-- ================================================================== -->
@@ -129,6 +149,14 @@
     <wire>
         <source.uri>UnderwritingProcess/PassthroughUnderwritingService</source.uri>
         <target.uri>PassthroughUnderwritingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingProcess/FileAdapterOutbound</source.uri>
+        <target.uri>FileAdapterOutbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>UnderwritingProcess/NotificationQueue</source.uri>
+        <target.uri>NotificationQueue</target.uri>
     </wire>
 
 </composite>

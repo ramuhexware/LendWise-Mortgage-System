@@ -10,7 +10,9 @@
          xmlns:pricing="http://lendwise.com/soa/pricing"
          xmlns:types="http://lendwise.com/soa/pricing/types"
          xmlns:db="http://lendwise.com/soa/adapter/db"
-         xmlns:investor="http://lendwise.com/soa/investor">
+         xmlns:investor="http://lendwise.com/soa/investor"
+         xmlns:file="http://lendwise.com/soa/adapter/file"
+         xmlns:jms="http://lendwise.com/soa/adapter/jms">
 
     <!-- ================================================================== -->
     <!-- Partner Links                                                      -->
@@ -32,6 +34,16 @@
         <partnerLink name="PassthroughPricingService"
                      partnerLinkType="pricing:PassthroughPLT"
                      partnerRole="PassthroughProvider"/>
+
+        <!-- FileAdapter for Archiving Pricing Quotes -->
+        <partnerLink name="FileAdapterOutbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     partnerRole="FileWriter"/>
+
+        <!-- JMS Queue Publisher for Rate Lock Notifications -->
+        <partnerLink name="NotificationQueue"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     partnerRole="JMSProducer"/>
     </partnerLinks>
 
     <!-- ================================================================== -->
@@ -50,6 +62,7 @@
         <variable name="investorPriceRequest" messageType="investor:InvestorPriceRequest"/>
         <variable name="investorPriceResponse" messageType="investor:InvestorPriceResponse"/>
         <variable name="dbInsertRequest" messageType="db:RateLockCollection"/>
+        <variable name="notificationMessage" messageType="jms:NotificationMessage"/>
     </variables>
 
     <!-- ================================================================== -->
@@ -183,16 +196,6 @@
                 java.util.List<com.lendwise.adapters.AmortizationCalculator.AmortizationEntry> schedule =
                     calculator.generateSchedule(loanAmount, finalRate, loanTerm);
 
-                // Build schedule XML
-                StringBuilder scheduleXml = new StringBuilder();
-                int count = 0;
-                for (com.lendwise.adapters.AmortizationCalculator.AmortizationEntry entry : schedule) {
-                    if (count++ >= 12) break; // Only first 12 months
-                    scheduleXml.append(String.format(
-                        "<entry><period>%d</period><payment>%.2f</payment><principal>%.2f</principal><interest>%.2f</interest><balance>%.2f</balance></entry>",
-                        entry.getPeriod(), entry.getPayment(), entry.getPrincipal(), entry.getInterest(), entry.getBalance()));
-                }
-
                 // Set output variables
                 setVariableData("baseRate", String.format("%.4f", baseRate));
                 setVariableData("llpaAdjustment", String.format("%.4f", llpaAdjustment));
@@ -241,6 +244,39 @@
                 partnerLink="PricingDB"
                 operation="insertRateLock"
                 inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- FileAdapter: Archive Rate Lock Pricing Quote                   -->
+        <!-- ============================================================== -->
+
+        <invoke name="ArchivePricingQuote"
+                partnerLink="FileAdapterOutbound"
+                operation="Write"
+                inputVariable="inputVariable"/>
+
+        <!-- ============================================================== -->
+        <!-- JMS Queue Publisher: Publish Rate Lock Event                   -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareJMSNotification">
+            <copy>
+                <from>$inputVariable.pricingRequest/types:loanId</from>
+                <to>$notificationMessage.notification/jms:loanId</to>
+            </copy>
+            <copy>
+                <from>'RATE_LOCK_EXECUTED'</from>
+                <to>$notificationMessage.notification/jms:notificationType</to>
+            </copy>
+            <copy>
+                <from>concat('Rate Lock ', $lockId, ' executed at rate ', string($finalRate), '%. Monthly payment: $', string($monthlyPayment))</from>
+                <to>$notificationMessage.notification/jms:message</to>
+            </copy>
+        </assign>
+
+        <invoke name="PublishRateLockEvent"
+                partnerLink="NotificationQueue"
+                operation="Produce"
+                inputVariable="notificationMessage"/>
 
         <!-- Send to Gold Field via Pass-through -->
         <invoke name="NotifyGoldField"

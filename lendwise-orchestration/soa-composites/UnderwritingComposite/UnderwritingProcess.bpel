@@ -11,7 +11,9 @@
          xmlns:types="http://lendwise.com/soa/underwriting/types"
          xmlns:credit="http://creditbureau.example.com/wsdl"
          xmlns:aus="http://lendwise.com/soa/aus"
-         xmlns:db="http://lendwise.com/soa/adapter/db">
+         xmlns:db="http://lendwise.com/soa/adapter/db"
+         xmlns:file="http://lendwise.com/soa/adapter/file"
+         xmlns:jms="http://lendwise.com/soa/adapter/jms">
 
     <!-- ================================================================== -->
     <!-- Partner Links                                                      -->
@@ -37,6 +39,16 @@
         <partnerLink name="PassthroughUnderwritingService"
                      partnerLinkType="uw:PassthroughPLT"
                      partnerRole="PassthroughProvider"/>
+
+        <!-- FileAdapter for Archiving Underwriting Reports -->
+        <partnerLink name="FileAdapterOutbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     partnerRole="FileWriter"/>
+
+        <!-- JMS Queue Publisher for Decision Notifications -->
+        <partnerLink name="NotificationQueue"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     partnerRole="JMSProducer"/>
     </partnerLinks>
 
     <!-- ================================================================== -->
@@ -55,6 +67,7 @@
         <variable name="riskScore" type="xsd:int"/>
         <variable name="decisionStatus" type="xsd:string"/>
         <variable name="conditions" element="types:ConditionListType"/>
+        <variable name="notificationMessage" messageType="jms:NotificationMessage"/>
     </variables>
 
     <!-- ================================================================== -->
@@ -283,6 +296,39 @@
                 partnerLink="DatabaseAdapter"
                 operation="insertDecision"
                 inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- FileAdapter: Archive Underwriting Decision Report              -->
+        <!-- ============================================================== -->
+
+        <invoke name="ArchiveUnderwritingReport"
+                partnerLink="FileAdapterOutbound"
+                operation="Write"
+                inputVariable="inputVariable"/>
+
+        <!-- ============================================================== -->
+        <!-- JMS Queue Publisher: Publish Underwriting Decision Event       -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareJMSNotification">
+            <copy>
+                <from>$inputVariable.underwritingRequest/types:loanId</from>
+                <to>$notificationMessage.notification/jms:loanId</to>
+            </copy>
+            <copy>
+                <from>'UNDERWRITING_DECISION_GENERATED'</from>
+                <to>$notificationMessage.notification/jms:notificationType</to>
+            </copy>
+            <copy>
+                <from>concat('Underwriting decision for Loan ', string($inputVariable.underwritingRequest/types:loanId), ': ', string($decisionStatus))</from>
+                <to>$notificationMessage.notification/jms:message</to>
+            </copy>
+        </assign>
+
+        <invoke name="PublishUnderwritingDecisionEvent"
+                partnerLink="NotificationQueue"
+                operation="Produce"
+                inputVariable="notificationMessage"/>
 
         <!-- ============================================================== -->
         <!-- Send to Gold Field via Pass-through                            -->

@@ -207,10 +207,35 @@ A comprehensive loan mortgage application system demonstrating Oracle SOA Suite 
 
 | Module | Description | Build Tool |
 |--------|-------------|------------|
-| `lendwise-ui/` | Web UI (Tomcat, JSP/Angular) | Maven |
-| `lendwise-orchestration/` | SOA Suite + OSB 12c (WebLogic) | Maven |
-| `lendwise-passthrough-service/` | Pass-through service (OCP) | Gradle |
-| `gold-field-services/` | 12 microservices (EKS) | Gradle |
+| `lendwise-ui/` | Web UI (Tomcat, Spring MVC / JSP) | Maven |
+| `lendwise-orchestration/` | SOA Suite + OSB 12c (WebLogic, BPEL & OSB Pipelines) | Maven |
+| `lendwise-passthrough/` | Pass-through Gateway (Spring Boot 3.3 WebFlux / OCP) | Gradle |
+| `gold-field-services/` | 12 Domain Microservices (Spring Boot WebFlux / EKS) | Gradle |
+
+## Recent End-to-End System Updates & Fixes
+
+1. **`lendwise-ui` Layer**:
+   - Added missing Maven dependencies for **Lombok** (`1.18.30`) and **Jackson JSR-310** (`jackson-datatype-jsr310`) in `pom.xml`.
+   - Verified clean compilation with `mvn compile` (**BUILD SUCCESS**).
+
+2. **`lendwise-passthrough` Layer**:
+   - **Dynamic HTTP Routing**: Refactored `GoldFieldRoutingService` to support dynamic HTTP methods (`GET`, `POST`, `PUT`, `DELETE`). Fixed body payload handling on GET requests (`webClient.get()`), eliminating `IllegalArgumentException: bodyValue is required` errors.
+   - **Service Mappings & Configuration**: Added `GoldFieldServicesConfig` properties and `application.properties` mappings for all 12 Gold Field microservices (`borrower`, `kyc`, `document`, `credit`, `underwriting`, `compliance`, `pricing`, `ratelock`, `amortization`, `closing`, `esign`, `funding`).
+   - **KYC & Loan Lookup Endpoints**: Added `KycPassthroughController` (`POST /api/kyc/verify`) and added GET endpoints by loan ID in `UnderwritingPassthroughController`, `PricingPassthroughController`, and `ClosingPassthroughController`.
+
+3. **`gold-field-services` Layer**:
+   - Implemented reactive Spring WebFlux REST controllers and model DTOs across all 11 previously missing microservices:
+     - `kyc-service`: `KycController` (`POST /api/kyc/verify`)
+     - `document-service`: `DocumentController` (`POST /api/documents`, `GET /api/documents/loan/{loanId}/checklist`, `POST /api/documents/{documentId}/classify`)
+     - `underwriting-service`: `UnderwritingController` (`POST /api/underwriting`, `GET /api/underwriting/{decisionId}`, `GET /api/underwriting/loan/{loanId}`, `POST /api/underwriting/{decisionId}/conditions`)
+     - `compliance-service`: `ComplianceController` (`POST /api/compliance`, `GET /api/compliance/loan/{loanId}`, `POST /api/compliance/trid/validate`)
+     - `pricing-service`: `PricingController` (`POST /api/pricing`, `POST /api/pricing/lock`, `GET /api/pricing/loan/{loanId}`, `GET /api/pricing/loan/{loanId}/scenarios`)
+     - `closing-service`: `ClosingController` (`POST /api/closing`, `GET /api/closing/{cdId}`, `GET /api/closing/loan/{loanId}`, `POST /api/closing/{cdId}/deliver`)
+     - `credit-service`: `CreditController` (`POST /api/credit/inquiry`, `GET /api/credit/report/{ssn}`)
+     - `ratelock-service`: `RateLockController` (`POST /api/ratelock/lock`)
+     - `amortization-service`: `AmortizationController` (`POST /api/amortization/schedule`)
+     - `esign-service`: `ESignController` (`POST /api/esign/package`, `POST /api/envelopes`)
+     - `funding-service`: `FundingController` (`POST /api/funding/disburse`)
 
 ## 11 OSB Integration Patterns Location
 
@@ -224,18 +249,18 @@ See [OSB Integration Patterns Documentation](docs/OSB_PATTERNS.md) for full arch
 ### LendWise UI (Maven)
 ```bash
 cd lendwise-ui
-mvn clean install
+mvn clean compile
 ```
 
 ### LendWise Orchestration (Maven)
 ```bash
 cd lendwise-orchestration
-mvn clean install
+mvn clean compile
 ```
 
 ### LendWise Pass-through Service (Gradle)
 ```bash
-cd lendwise-passthrough-service
+cd lendwise-passthrough
 ./gradlew build
 ```
 
@@ -261,7 +286,7 @@ cd gold-field-services/borrower-service
 ## Database
 
 - **Oracle DB** - LendWise Orchestration (schemas in `lendwise-orchestration/database/`)
-- **MongoDB Atlas** - Gold Field Services (schemas in `*/src/main/resources/mongo/`)
+- **MongoDB Atlas** - Gold Field Services & Pass-through Audit (schemas in `*/src/main/resources/mongo/`)
 
 ## Documentation
 
@@ -270,54 +295,4 @@ cd gold-field-services/borrower-service
 - [Integration Patterns](docs/INTEGRATION_PATTERNS.md)
 - [Database Schema](docs/DATABASE_SCHEMA.md)
 - [API Contracts](docs/API_CONTRACTS.md)
-g Disclosure** - E-Sign, funding audit
 
-## Build Instructions
-
-### LendWise UI (Maven)
-```bash
-cd lendwise-ui
-mvn clean install
-```
-
-### LendWise Orchestration (Maven)
-```bash
-cd lendwise-orchestration
-mvn clean install
-```
-
-### LendWise Pass-through Service (Gradle)
-```bash
-cd lendwise-passthrough-service
-./gradlew build
-```
-
-### Gold Field Services (Gradle)
-```bash
-cd gold-field-services/borrower-service
-./gradlew build
-```
-
-## Integration Patterns
-
-| Pattern | Technology | Location |
-|---------|------------|----------|
-| REST | Spring WebClient | Pass-through, Gold Field |
-| SOAP | JAX-WS, WSDL | Orchestration |
-| File Processing | File/FTP Adapter | Orchestration |
-| Database | DB Adapter | Orchestration |
-| JMS | JMS Adapter | Orchestration |
-| Kafka | KafkaTemplate | Gold Field |
-| AMQ | JmsTemplate | Gold Field |
-
-## Database
-
-- **Oracle DB** - LendWise Orchestration (schemas in `lendwise-orchestration/database/`)
-- **MongoDB Atlas** - Gold Field Services (schemas in `*/src/main/resources/mongo/`)
-
-## Documentation
-
-- [Architecture Details](docs/ARCHITECTURE.md)
-- [Integration Patterns](docs/INTEGRATION_PATTERNS.md)
-- [Database Schema](docs/DATABASE_SCHEMA.md)
-- [API Contracts](docs/API_CONTRACTS.md)

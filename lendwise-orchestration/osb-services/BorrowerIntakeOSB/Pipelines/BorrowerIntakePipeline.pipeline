@@ -3,7 +3,8 @@
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xmlns:con1="http://www.bea.com/wli/sb/stages/routing/config"
                   xmlns:con2="http://www.bea.com/wli/sb/stages/config"
-                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config">
+                  xmlns:con3="http://www.bea.com/wli/sb/stages/transform/config"
+                  xmlns:con4="http://www.bea.com/wli/sb/stages/publish/config">
     <con:coreEntry>
         <con:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
             <con:wsdl ref="BorrowerIntakeOSB/WSDL/BorrowerIntakeOSBService"/>
@@ -15,6 +16,7 @@
     </con:coreEntry>
     <con:router errorHandler="common/faults/FaultHandler">
         <con:pipeline type="request" name="BorrowerIntakeRequestPipeline">
+            <!-- Stage 1: Validate and Enrich -->
             <con:stage name="ValidateAndEnrich">
                 <con:context/>
                 <con:actions>
@@ -33,13 +35,68 @@
                     </con3:transport-headers>
                 </con:actions>
             </con:stage>
-        </con:pipeline>
-        <con:pipeline type="response" name="BorrowerIntakeResponsePipeline">
-            <con:stage name="LogResponse">
+
+            <!-- Stage 2: Java Adapter Callout (DTICalculator) -->
+            <con:stage name="JavaCallout_DTI">
                 <con:context/>
-                <con:actions/>
+                <con:actions>
+                    <con3:java-callout varName="dtiResult">
+                        <con2:id>id_borrower_java_01</con2:id>
+                        <con3:archive ref="java-adapters/dti-calculator/target/dti-calculator-1.0.0-SNAPSHOT.jar"/>
+                        <con3:className>com.lendwise.adapters.DTICalculator</con3:className>
+                        <con3:method>public static double calculateFrontEndDTI(double, double)</con3:method>
+                        <con3:expr>
+                            <con2:xqueryText>xs:double($body//*:housingExpense)</con2:xqueryText>
+                        </con3:expr>
+                        <con3:expr>
+                            <con2:xqueryText>xs:double($body//*:grossMonthlyIncome)</con2:xqueryText>
+                        </con3:expr>
+                    </con3:java-callout>
+                </con:actions>
+            </con:stage>
+
+            <!-- Stage 3: Audit Log via DbAdapter Business Service -->
+            <con:stage name="AuditDB_Publish">
+                <con:context/>
+                <con:actions>
+                    <con4:route>
+                        <con2:id>id_borrower_db_01</con2:id>
+                        <con4:service ref="common/BusinessServices/AuditDBBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>insertAuditLog</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
+            </con:stage>
+
+            <!-- Stage 4: Archive Request Payload via FileAdapter Business Service -->
+            <con:stage name="FileArchive_Publish">
+                <con:context/>
+                <con:actions>
+                    <con4:route>
+                        <con2:id>id_borrower_file_01</con2:id>
+                        <con4:service ref="common/BusinessServices/FileArchiveBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>Write</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
             </con:stage>
         </con:pipeline>
+
+        <con:pipeline type="response" name="BorrowerIntakeResponsePipeline">
+            <con:stage name="LogAndNotify">
+                <con:context/>
+                <con:actions>
+                    <!-- Stage 5: Publish JMS Event to Notification Queue -->
+                    <con4:route>
+                        <con2:id>id_borrower_jms_01</con2:id>
+                        <con4:service ref="common/BusinessServices/JMSNotificationBusinessService" xsi:type="ref:BusinessServiceRef" xmlns:ref="http://www.bea.com/wli/sb/reference"/>
+                        <con4:operation>Produce</con4:operation>
+                        <con4:outboundTransform/>
+                    </con4:route>
+                </con:actions>
+            </con:stage>
+        </con:pipeline>
+
         <con:flow>
             <con:pipeline-node name="BorrowerIntakePipelineNode">
                 <con:request>BorrowerIntakeRequestPipeline</con:request>

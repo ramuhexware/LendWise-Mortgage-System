@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:businessServiceEntry xmlns:con="http://www.bea.com/wli/sb/services/config"
+                         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                         xmlns:con1="http://www.bea.com/wli/sb/resources/config">
+    <con:coreEntry>
+        <con:description>OSB JMS Publisher Business Service for Publishing Notification Events</con:description>
+        <con:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
+            <con:wsdl ref="common/wsdl/JMSNotificationAdapter"/>
+            <con:binding>
+                <con:name>JMSNotificationAdapterBinding</con:name>
+                <con:namespace>http://lendwise.com/soa/adapter/jms</con:namespace>
+            </con:binding>
+        </con:binding>
+    </con:coreEntry>
+    <con:endpointConfig>
+        <con:provider-id>jms</con:provider-id>
+        <con:outbound-properties>
+            <con:retry-count>3</con:retry-count>
+            <con:retry-interval>5</con:retry-interval>
+        </con:outbound-properties>
+        <con:provider-specific>
+            <jms:jms-service xmlns:jms="http://www.bea.com/wli/sb/transports/jms">
+                <jms:connection-factory>jms/NotificationConnectionFactory</jms:connection-factory>
+                <jms:destination-jndi-name>jms/NotificationQueue</jms:destination-jndi-name>
+                <jms:destination-type>QUEUE</jms:destination-type>
+                <jms:message-type>Text</jms:message-type>
+            </jms:jms-service>
+        </con:provider-specific>
+    </con:endpointConfig>
+</con:businessServiceEntry>

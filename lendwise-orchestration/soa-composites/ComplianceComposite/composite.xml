@@ -6,7 +6,7 @@
            state="on"
            xmlns="http://xmlns.oracle.com/sca/1.0"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+           xmlns:wsp="http://schemas.oracle.com/ws/2004/09/policy"
            xmlns:orawsp="http://schemas.oracle.com/ws/2006/01/policy"
            xmlns:ui="http://xmlns.oracle.com/soa/designer/">
 
@@ -14,8 +14,9 @@
     <!-- Flow 4: Compliance                                                 -->
     <!-- - TRID compliance (LE/CD timing, fee tolerances)                   -->
     <!-- - QM/ATR rules (43% DTI cap, points & fees limits)                 -->
-    <!-- - RESPA/TILA validation                                            -->
-    <!-- - State-specific compliance rules                                  -->
+    <!-- - Database Adapter for compliance persistence                      -->
+    <!-- - File Adapter for compliance report archiving                     -->
+    <!-- - JMS Queue Publisher for event notification publishing            -->
     <!-- ================================================================== -->
 
     <!-- Import WSDLs -->
@@ -56,6 +57,12 @@
             <reference name="PassthroughComplianceService">
                 <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
             </reference>
+            <reference name="FileAdapterOutbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+            </reference>
+            <reference name="NotificationQueue">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+            </reference>
         </componentType>
     </component>
 
@@ -77,6 +84,18 @@
                       contentType="application/json"/>
     </reference>
 
+    <!-- File Adapter Outbound - Report Archiving -->
+    <reference name="FileAdapterOutbound">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+        <binding.jca config="adapters/FileAdapterOutbound_file.jca"/>
+    </reference>
+
+    <!-- JMS Queue Publisher - Event Queue -->
+    <reference name="NotificationQueue">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+        <binding.jca config="adapters/NotificationQueue_jms.jca"/>
+    </reference>
+
     <!-- ================================================================== -->
     <!-- Wiring                                                             -->
     <!-- ================================================================== -->
@@ -96,6 +115,14 @@
     <wire>
         <source.uri>ComplianceProcess/PassthroughComplianceService</source.uri>
         <target.uri>PassthroughComplianceService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ComplianceProcess/FileAdapterOutbound</source.uri>
+        <target.uri>FileAdapterOutbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ComplianceProcess/NotificationQueue</source.uri>
+        <target.uri>NotificationQueue</target.uri>
     </wire>
 
 </composite>

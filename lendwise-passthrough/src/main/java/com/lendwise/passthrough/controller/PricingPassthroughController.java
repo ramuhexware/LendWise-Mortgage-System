@@ -46,6 +46,16 @@ public class PricingPassthroughController {
         return routingService.route("pricing-service", "/api/pricing/lock", lockRequest, headerMap);
     }
 
+    @GetMapping("/loan/{loanId}")
+    @Operation(summary = "Get pricing details", description = "Gets pricing details for loan")
+    public Mono<PassthroughResponse> getPricingDetails(
+            @PathVariable String loanId,
+            @RequestHeader HttpHeaders headers) {
+
+        Map<String, String> headerMap = extractHeaders(headers);
+        return routingService.route("pricing-service", "/api/pricing/loan/" + loanId, null, headerMap);
+    }
+
     @GetMapping("/loan/{loanId}/scenarios")
     @Operation(summary = "Get pricing scenarios", description = "Gets pricing scenarios for loan")
     public Mono<PassthroughResponse> getScenarios(

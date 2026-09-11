@@ -16,6 +16,7 @@
     <!-- - Borrower notification via JMS                                    -->
     <!-- - eSign integration                                                -->
     <!-- - Title/Settlement coordination                                    -->
+    <!-- - File Adapter for Closing Disclosure archiving                     -->
     <!-- ================================================================== -->
 
     <!-- Import WSDLs -->
@@ -74,6 +75,9 @@
             <reference name="PassthroughClosingService">
                 <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
             </reference>
+            <reference name="FileAdapterOutbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+            </reference>
         </componentType>
     </component>
 
@@ -118,6 +122,12 @@
                       contentType="application/json"/>
     </reference>
 
+    <!-- File Adapter Outbound - CD Package Archiving -->
+    <reference name="FileAdapterOutbound">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+        <binding.jca config="adapters/FileAdapterOutbound_file.jca"/>
+    </reference>
+
     <!-- ================================================================== -->
     <!-- Wiring                                                             -->
     <!-- ================================================================== -->
@@ -153,6 +163,10 @@
     <wire>
         <source.uri>ClosingDisclosureProcess/PassthroughClosingService</source.uri>
         <target.uri>PassthroughClosingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>ClosingDisclosureProcess/FileAdapterOutbound</source.uri>
+        <target.uri>FileAdapterOutbound</target.uri>
     </wire>
 
 </composite>

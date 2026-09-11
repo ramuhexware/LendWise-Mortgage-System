@@ -9,7 +9,9 @@
          xmlns:tns="http://lendwise.com/soa/document/bpel"
          xmlns:document="http://lendwise.com/soa/document"
          xmlns:types="http://lendwise.com/soa/document/types"
-         xmlns:file="http://lendwise.com/soa/adapter/file">
+         xmlns:file="http://lendwise.com/soa/adapter/file"
+         xmlns:db="http://lendwise.com/soa/adapter/db"
+         xmlns:jms="http://lendwise.com/soa/adapter/jms">
 
     <!-- ================================================================== -->
     <!-- Partner Links                                                      -->
@@ -31,6 +33,16 @@
         <partnerLink name="PassthroughDocumentService"
                      partnerLinkType="document:PassthroughPLT"
                      partnerRole="PassthroughProvider"/>
+
+        <!-- DbAdapter for Oracle DB Document Records -->
+        <partnerLink name="DocumentDB"
+                     partnerLinkType="db:DocumentDBPLT"
+                     partnerRole="DatabaseProvider"/>
+
+        <!-- JMS Queue Publisher for Document Events -->
+        <partnerLink name="NotificationQueue"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     partnerRole="JMSProducer"/>
     </partnerLinks>
 
     <!-- ================================================================== -->
@@ -46,6 +58,8 @@
         <variable name="ocrOutput" element="types:OCROutputType"/>
         <variable name="classificationResult" element="types:ClassificationResultType"/>
         <variable name="documentId" type="xsd:string"/>
+        <variable name="dbInsertRequest" messageType="db:DocumentCollection"/>
+        <variable name="notificationMessage" messageType="jms:NotificationMessage"/>
     </variables>
 
     <!-- ================================================================== -->
@@ -158,6 +172,58 @@
                 partnerLink="FileAdapterOutbound"
                 operation="Write"
                 inputVariable="inputVariable"/>
+
+        <!-- ============================================================== -->
+        <!-- DbAdapter: Persist Document Record to Oracle DB               -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareDBInsert">
+            <copy>
+                <from variable="documentId"/>
+                <to>$dbInsertRequest.DocumentCollection/db:Document/db:documentId</to>
+            </copy>
+            <copy>
+                <from>$inputVariable.documentRequest/types:loanId</from>
+                <to>$dbInsertRequest.DocumentCollection/db:Document/db:loanId</to>
+            </copy>
+            <copy>
+                <from>$classificationResult/types:classifiedType</from>
+                <to>$dbInsertRequest.DocumentCollection/db:Document/db:documentType</to>
+            </copy>
+            <copy>
+                <from>'PROCESSED'</from>
+                <to>$dbInsertRequest.DocumentCollection/db:Document/db:status</to>
+            </copy>
+        </assign>
+
+        <invoke name="PersistDocumentRecord"
+                partnerLink="DocumentDB"
+                operation="insertDocumentRecord"
+                inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- JMS Queue Publisher: Publish Event to jms/NotificationQueue    -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareJMSNotification">
+            <copy>
+                <from>$inputVariable.documentRequest/types:loanId</from>
+                <to>$notificationMessage.notification/jms:loanId</to>
+            </copy>
+            <copy>
+                <from>'DOCUMENT_PROCESSED'</from>
+                <to>$notificationMessage.notification/jms:notificationType</to>
+            </copy>
+            <copy>
+                <from>concat('Document ', $documentId, ' (', string($classificationResult/types:classifiedType), ') processed successfully.')</from>
+                <to>$notificationMessage.notification/jms:message</to>
+            </copy>
+        </assign>
+
+        <invoke name="PublishDocumentProcessedEvent"
+                partnerLink="NotificationQueue"
+                operation="Produce"
+                inputVariable="notificationMessage"/>
 
         <!-- Prepare Response -->
         <assign name="PrepareResponse">

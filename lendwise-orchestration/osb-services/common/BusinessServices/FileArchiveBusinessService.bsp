@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:businessServiceEntry xmlns:con="http://www.bea.com/wli/sb/services/config"
+                         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                         xmlns:con1="http://www.bea.com/wli/sb/resources/config">
+    <con:coreEntry>
+        <con:description>OSB JCA FileAdapter Business Service for Archiving Payload XML Files</con:description>
+        <con:binding type="SOAP" isSOAP12="false" xsi:type="con:SoapBindingType" xmlns:con="http://www.bea.com/wli/sb/services/bindings/config">
+            <con:wsdl ref="common/wsdl/FileArchiveAdapter"/>
+            <con:binding>
+                <con:name>FileArchiveAdapterBinding</con:name>
+                <con:namespace>http://lendwise.com/soa/adapter/file</con:namespace>
+            </con:binding>
+        </con:binding>
+    </con:coreEntry>
+    <con:endpointConfig>
+        <con:provider-id>jca</con:provider-id>
+        <con:option name="jca.manifest-token">
+            <con1:jca-manifest-token>adapters/FileArchive_file.jca</con1:jca-manifest-token>
+        </con:option>
+        <con:outbound-properties>
+            <con:retry-count>2</con:retry-count>
+            <con:retry-interval>3</con:retry-interval>
+        </con:outbound-properties>
+        <con:provider-specific>
+            <jca:jca-service xmlns:jca="http://www.bea.com/wli/sb/transports/jca">
+                <jca:connection-factory-location>eis/FileAdapter</jca:connection-factory-location>
+                <jca:adapter-name>File Adapter</jca:adapter-name>
+                <jca:adapter-type>FILE</jca:adapter-type>
+                <jca:dispatch-policy>SBDefaultResponseWorkManager</jca:dispatch-policy>
+            </jca:jca-service>
+        </con:provider-specific>
+    </con:endpointConfig>
+</con:businessServiceEntry>

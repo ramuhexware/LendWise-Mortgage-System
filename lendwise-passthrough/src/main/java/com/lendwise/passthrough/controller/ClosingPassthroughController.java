@@ -46,6 +46,16 @@ public class ClosingPassthroughController {
         return routingService.route("closing-service", "/api/closing/" + cdId, null, headerMap);
     }
 
+    @GetMapping("/loan/{loanId}")
+    @Operation(summary = "Get CD by loan ID", description = "Gets closing disclosure details by loan ID")
+    public Mono<PassthroughResponse> getClosingDisclosureByLoanId(
+            @PathVariable String loanId,
+            @RequestHeader HttpHeaders headers) {
+
+        Map<String, String> headerMap = extractHeaders(headers);
+        return routingService.route("closing-service", "/api/closing/loan/" + loanId, null, headerMap);
+    }
+
     @PostMapping("/{cdId}/deliver")
     @Operation(summary = "Deliver CD", description = "Routes CD delivery request")
     public Mono<PassthroughResponse> deliverCD(

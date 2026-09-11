@@ -46,6 +46,16 @@ public class UnderwritingPassthroughController {
         return routingService.route("underwriting-service", "/api/underwriting/" + decisionId, null, headerMap);
     }
 
+    @GetMapping("/loan/{loanId}")
+    @Operation(summary = "Get decision by loan ID", description = "Gets underwriting decision by loan ID")
+    public Mono<PassthroughResponse> getDecisionByLoanId(
+            @PathVariable String loanId,
+            @RequestHeader HttpHeaders headers) {
+
+        Map<String, String> headerMap = extractHeaders(headers);
+        return routingService.route("underwriting-service", "/api/underwriting/loan/" + loanId, null, headerMap);
+    }
+
     @PostMapping("/{decisionId}/conditions")
     @Operation(summary = "Add underwriting condition", description = "Adds condition to decision")
     public Mono<PassthroughResponse> addCondition(

@@ -14,8 +14,10 @@
     <!-- Flow 5: Pricing Engine                                             -->
     <!-- - Rate lock management                                             -->
     <!-- - LLPA (Loan Level Price Adjustments) calculation                  -->
-    <!-- - Amortization schedule generation                                 -->
-    <!-- - Best execution pricing                                           -->
+    <!-- - Amortization schedule generation (Java Adapter)                   -->
+    <!-- - Database Adapter for Rate Lock persistence                       -->
+    <!-- - File Adapter for Pricing Quote archiving                         -->
+    <!-- - JMS Queue Publisher for Rate Lock event notifications            -->
     <!-- ================================================================== -->
 
     <!-- Import WSDLs -->
@@ -59,6 +61,12 @@
             <reference name="PassthroughPricingService">
                 <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
             </reference>
+            <reference name="FileAdapterOutbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+            </reference>
+            <reference name="NotificationQueue">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+            </reference>
         </componentType>
     </component>
 
@@ -87,6 +95,18 @@
                       contentType="application/json"/>
     </reference>
 
+    <!-- File Adapter Outbound - Pricing Quote Archiving -->
+    <reference name="FileAdapterOutbound">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+        <binding.jca config="adapters/FileAdapterOutbound_file.jca"/>
+    </reference>
+
+    <!-- JMS Queue Publisher - Event Queue -->
+    <reference name="NotificationQueue">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+        <binding.jca config="adapters/NotificationQueue_jms.jca"/>
+    </reference>
+
     <!-- ================================================================== -->
     <!-- Wiring                                                             -->
     <!-- ================================================================== -->
@@ -110,6 +130,14 @@
     <wire>
         <source.uri>PricingProcess/PassthroughPricingService</source.uri>
         <target.uri>PassthroughPricingService</target.uri>
+    </wire>
+    <wire>
+        <source.uri>PricingProcess/FileAdapterOutbound</source.uri>
+        <target.uri>FileAdapterOutbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>PricingProcess/NotificationQueue</source.uri>
+        <target.uri>NotificationQueue</target.uri>
     </wire>
 
 </composite>

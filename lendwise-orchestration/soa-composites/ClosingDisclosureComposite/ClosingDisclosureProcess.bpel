@@ -11,6 +11,7 @@
          xmlns:types="http://lendwise.com/soa/closing/types"
          xmlns:db="http://lendwise.com/soa/adapter/db"
          xmlns:jms="http://lendwise.com/soa/adapter/jms"
+         xmlns:file="http://lendwise.com/soa/adapter/file"
          xmlns:esign="http://lendwise.com/soa/esign"
          xmlns:title="http://lendwise.com/soa/title">
 
@@ -46,6 +47,11 @@
         <partnerLink name="PassthroughClosingService"
                      partnerLinkType="closing:PassthroughPLT"
                      partnerRole="PassthroughProvider"/>
+
+        <!-- FileAdapter for Archiving Generated Closing Disclosures -->
+        <partnerLink name="FileAdapterOutbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     partnerRole="FileWriter"/>
     </partnerLinks>
 
     <!-- ================================================================== -->
@@ -208,6 +214,15 @@
                 partnerLink="ClosingDB"
                 operation="insertClosingDisclosure"
                 inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- FileAdapter: Archive Closing Disclosure Package                -->
+        <!-- ============================================================== -->
+
+        <invoke name="ArchiveClosingDisclosure"
+                partnerLink="FileAdapterOutbound"
+                operation="Write"
+                inputVariable="inputVariable"/>
 
         <!-- ============================================================== -->
         <!-- Send for eSignature                                            -->

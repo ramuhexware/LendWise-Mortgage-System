@@ -15,7 +15,9 @@
     <!-- - Identity verification (KYC/CIP)                                  -->
     <!-- - Income/Assets/Liabilities intake                                 -->
     <!-- - DTI/LTV/PITI mathematical models (Java Adapter)                  -->
-    <!-- - Loan Estimate (LE) generation                                    -->
+    <!-- - Oracle Database Audit & Persistence (DbAdapter)                  -->
+    <!-- - Application Payload Archiving (FileAdapter)                       -->
+    <!-- - Event Publishing (JMS Queue Publisher)                           -->
     <!-- ================================================================== -->
 
     <!-- Import WSDLs -->
@@ -65,6 +67,15 @@
             <reference name="KYCServiceRef">
                 <interface.wsdl interface="http://lendwise.com/soa/passthrough#wsdl.interface(PassthroughPortType)"/>
             </reference>
+            <reference name="BorrowerIntakeDB">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(BorrowerIntakeDBPortType)"/>
+            </reference>
+            <reference name="FileAdapterOutbound">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+            </reference>
+            <reference name="NotificationQueue">
+                <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+            </reference>
         </componentType>
     </component>
 
@@ -86,6 +97,24 @@
         <binding.rest location="${PASSTHROUGH_SERVICE_URL}/api/kyc/verify"
                       method="POST"
                       contentType="application/json"/>
+    </reference>
+
+    <!-- DbAdapter Reference - Oracle Database Persistence -->
+    <reference name="BorrowerIntakeDB">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/db#wsdl.interface(BorrowerIntakeDBPortType)"/>
+        <binding.jca config="adapters/BorrowerIntakeDB_db.jca"/>
+    </reference>
+
+    <!-- FileAdapter Outbound Reference - File Payload Archiving -->
+    <reference name="FileAdapterOutbound">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/file#wsdl.interface(FileWritePortType)"/>
+        <binding.jca config="adapters/FileAdapterOutbound_file.jca"/>
+    </reference>
+
+    <!-- JMS Queue Publisher Reference - WebLogic JMS Event Queue -->
+    <reference name="NotificationQueue">
+        <interface.wsdl interface="http://lendwise.com/soa/adapter/jms#wsdl.interface(JMSProducePortType)"/>
+        <binding.jca config="adapters/NotificationQueue_jms.jca"/>
     </reference>
 
     <!-- ================================================================== -->
@@ -110,6 +139,18 @@
     <wire>
         <source.uri>BorrowerIntakeProcess/KYCServiceRef</source.uri>
         <target.uri>KYCServiceRef</target.uri>
+    </wire>
+    <wire>
+        <source.uri>BorrowerIntakeProcess/BorrowerIntakeDB</source.uri>
+        <target.uri>BorrowerIntakeDB</target.uri>
+    </wire>
+    <wire>
+        <source.uri>BorrowerIntakeProcess/FileAdapterOutbound</source.uri>
+        <target.uri>FileAdapterOutbound</target.uri>
+    </wire>
+    <wire>
+        <source.uri>BorrowerIntakeProcess/NotificationQueue</source.uri>
+        <target.uri>NotificationQueue</target.uri>
     </wire>
 
 </composite>

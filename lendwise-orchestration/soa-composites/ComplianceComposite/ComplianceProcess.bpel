@@ -9,7 +9,9 @@
          xmlns:tns="http://lendwise.com/soa/compliance/bpel"
          xmlns:comp="http://lendwise.com/soa/compliance"
          xmlns:types="http://lendwise.com/soa/compliance/types"
-         xmlns:db="http://lendwise.com/soa/adapter/db">
+         xmlns:db="http://lendwise.com/soa/adapter/db"
+         xmlns:file="http://lendwise.com/soa/adapter/file"
+         xmlns:jms="http://lendwise.com/soa/adapter/jms">
 
     <!-- ================================================================== -->
     <!-- Partner Links                                                      -->
@@ -27,6 +29,16 @@
         <partnerLink name="PassthroughComplianceService"
                      partnerLinkType="comp:PassthroughPLT"
                      partnerRole="PassthroughProvider"/>
+
+        <!-- FileAdapter for Archiving Compliance Reports -->
+        <partnerLink name="FileAdapterOutbound"
+                     partnerLinkType="file:FileAdapterPLT"
+                     partnerRole="FileWriter"/>
+
+        <!-- JMS Queue Publisher for Compliance Notifications -->
+        <partnerLink name="NotificationQueue"
+                     partnerLinkType="jms:JMSAdapterPLT"
+                     partnerRole="JMSProducer"/>
     </partnerLinks>
 
     <!-- ================================================================== -->
@@ -42,6 +54,7 @@
         <variable name="feeToleranceResult" element="types:FeeToleranceResultType"/>
         <variable name="violations" element="types:ViolationListType"/>
         <variable name="dbInsertRequest" messageType="db:ComplianceCheckCollection"/>
+        <variable name="notificationMessage" messageType="jms:NotificationMessage"/>
     </variables>
 
     <!-- ================================================================== -->
@@ -108,7 +121,6 @@
                 }
 
                 // TRID Rule 3: Check if waiting period reset is needed
-                // (APR increase > 0.125%, loan product change, prepayment penalty added)
 
                 setVariableData("tridCompliant", Boolean.toString(tridCompliant));
                 if (violations.length() > 0) {
@@ -133,13 +145,12 @@
                     (String)getVariableData("inputVariable", "complianceRequest", "/types:loanAmount"));
                 double pointsAndFees = Double.parseDouble(
                     (String)getVariableData("inputVariable", "complianceRequest", "/types:pointsAndFees"));
-                String loanPurpose = (String)getVariableData("inputVariable", "complianceRequest", "/types:loanPurpose");
 
                 boolean isQMEligible = true;
                 String existingViolations = (String)getVariableData("violations", "/types:ViolationListType/types:violationText");
                 StringBuilder violations = new StringBuilder(existingViolations != null ? existingViolations : "");
 
-                // QM Rule 1: DTI cannot exceed 43% (with some exceptions for GSE eligible loans)
+                // QM Rule 1: DTI cannot exceed 43%
                 if (dti > 43.0) {
                     violations.append("QM_DTI_VIOLATION: Back-end DTI exceeds 43% cap (" + String.format("%.2f", dti) + "%)|");
                     isQMEligible = false;
@@ -164,10 +175,6 @@
                         String.format("%.2f", pointsAndFees) + " > $" + String.format("%.2f", pointsFeesLimit) + ")|");
                     isQMEligible = false;
                 }
-
-                // QM Rule 3: No negative amortization, interest-only, balloon (for QM)
-                // QM Rule 4: Loan term cannot exceed 30 years
-                // QM Rule 5: Must verify and document income/assets
 
                 setVariableData("isQMEligible", Boolean.toString(isQMEligible));
                 if (violations.length() > 0) {
@@ -216,6 +223,39 @@
                 partnerLink="ComplianceDB"
                 operation="insertComplianceCheck"
                 inputVariable="dbInsertRequest"/>
+
+        <!-- ============================================================== -->
+        <!-- FileAdapter: Archive Compliance Audit Report                   -->
+        <!-- ============================================================== -->
+
+        <invoke name="ArchiveComplianceReport"
+                partnerLink="FileAdapterOutbound"
+                operation="Write"
+                inputVariable="inputVariable"/>
+
+        <!-- ============================================================== -->
+        <!-- JMS Queue Publisher: Publish Compliance Checked Event          -->
+        <!-- ============================================================== -->
+
+        <assign name="PrepareJMSNotification">
+            <copy>
+                <from>$inputVariable.complianceRequest/types:loanId</from>
+                <to>$notificationMessage.notification/jms:loanId</to>
+            </copy>
+            <copy>
+                <from>'COMPLIANCE_CHECK_COMPLETED'</from>
+                <to>$notificationMessage.notification/jms:notificationType</to>
+            </copy>
+            <copy>
+                <from>concat('Compliance Check ', $checkId, ' completed. TRID: ', string($tridCompliant), ', QM: ', string($isQMEligible))</from>
+                <to>$notificationMessage.notification/jms:message</to>
+            </copy>
+        </assign>
+
+        <invoke name="PublishComplianceCheckedEvent"
+                partnerLink="NotificationQueue"
+                operation="Produce"
+                inputVariable="notificationMessage"/>
 
         <!-- Send to Gold Field via Pass-through -->
         <invoke name="NotifyGoldField"
